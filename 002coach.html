@@ -621,9 +621,11 @@ function enterPublic(){
 }
 
 function doLogout(){
-  isAdmin=false; gToken=null; gTokenExpiry=0; selectedCoach=''; selectedVenue='';
+  isAdmin=false; gToken=null; gTokenExpiry=0; _gClient=null; selectedCoach=''; selectedVenue='';
   document.getElementById('app').style.display='none';
   document.getElementById('loginScreen').style.display='flex';
+  document.getElementById('loginBox').style.display='';
+  document.getElementById('syncBox').style.display='none';
   document.getElementById('pwInput').value='';
   document.body.classList.remove('admin-mode');
   document.getElementById('logoutBtn').textContent='ออกจากระบบ';
