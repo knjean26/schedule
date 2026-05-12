@@ -442,7 +442,7 @@ body.admin-mode .admin-only { display:flex; flex-direction:column; gap:16px; }
 <div class="toast" id="toast"></div>
 
 <script>
-const KEY_S='pb_sessions', KEY_CV='pb_custom_venues';
+const KEY_CV='pb_custom_venues';
 const FIXED_PW_HASH='ac9689e2272427085e35b9d3e3e8bed88cb3434828b43b86fc0596cad4c6e270';
 const SHEET_ID='1fCLRpZfE6eaiuAa404GA5WUYXmihVcbVKsjUIIZgSE8';
 const CLIENT_ID='886397941210-1iemf0bqi86nl9lpelkae9d4a8c52aoq.apps.googleusercontent.com';
@@ -510,33 +510,10 @@ let duplicatingId=null, duplicateDates=[];
 let gToken=null, gTokenExpiry=0;
 
 /* Load + migrate old sessions */
-let sessions=(()=>{
-  try{
-    let s=JSON.parse(localStorage.getItem(KEY_S));
-    if(!s) return [];
-    const ws=getWeekStart(0);
-    return s.map(sess=>{
-      /* dayIdx → date migration */
-      if(!sess.date && sess.dayIdx!==undefined){
-        const d=new Date(ws); d.setDate(ws.getDate()+sess.dayIdx);
-        sess={...sess,date:toDateStr(d)};
-        delete sess.dayIdx;
-      }
-      /* court → venue/court migration */
-      if(!sess.venue && sess.court){
-        const v=KNOWN_VENUES.includes(sess.court)?sess.court:'Other';
-        sess={...sess,venue:v,venueOther:v==='Other'?sess.court:'',court:1};
-      }
-      if(!sess.duration) sess={...sess,duration:60};
-      if(!sess.venueOther) sess={...sess,venueOther:''};
-      return sess;
-    });
-  }catch{return [];}
-})();
-let nextId=Math.max(...sessions.map(s=>s.id),0)+1;
+let sessions=[];
+let nextId=1;
 
 const saveSessions=()=>{
-  localStorage.setItem(KEY_S,JSON.stringify(sessions));
   autoSync();
 };
 async function hashPw(str){
@@ -956,7 +933,6 @@ async function doPullFromSheets(token){
     };
   });
   nextId=Math.max(...sessions.map(s=>s.id),0)+1;
-  localStorage.setItem(KEY_S,JSON.stringify(sessions));
   return true;
 }
 
