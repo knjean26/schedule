@@ -609,15 +609,67 @@ async function doLogin(){
 }
 
 
-function enterPublic(){
+async function enterPublic(){
   isAdmin=false;
+  document.body.classList.remove('admin-mode');
+  document.getElementById('loginBox').style.display='none';
+  document.getElementById('syncBox').style.display='';
+  document.getElementById('syncIcon').textContent='⏳';
+  document.getElementById('syncMsg').textContent='กำลังโหลดตาราง...';
+  document.getElementById('syncBtn').style.display='none';
+  try{
+    await loadPublicData();
+  }catch(e){
+    document.getElementById('syncIcon').textContent='❌';
+    document.getElementById('syncMsg').textContent='โหลดข้อมูลไม่สำเร็จ กรุณาลองใหม่';
+    document.getElementById('syncBtn').style.display='';
+    document.getElementById('syncBtn').textContent='🔄 ลองใหม่';
+    document.getElementById('syncBtn').onclick=enterPublic;
+    return;
+  }
   document.getElementById('loginScreen').style.display='none';
   document.getElementById('app').style.display='block';
-  document.body.classList.remove('admin-mode');
   document.getElementById('modeBadge').className='mode-badge mode-public';
   document.getElementById('modeBadge').textContent='👁 ดูตาราง';
   document.getElementById('logoutBtn').textContent='← กลับ';
   render();
+}
+
+function parseCSV(text){
+  return text.trim().split('\n').map(line=>{
+    const cols=[]; let cur='', inQ=false;
+    for(let i=0;i<line.length;i++){
+      const c=line[i];
+      if(c==='"'&&!inQ){inQ=true;}
+      else if(c==='"'&&inQ&&line[i+1]==='"'){cur+='"';i++;}
+      else if(c==='"'&&inQ){inQ=false;}
+      else if(c===','&&!inQ){cols.push(cur.trim());cur='';}
+      else{cur+=c;}
+    }
+    cols.push(cur.trim()); return cols;
+  });
+}
+
+async function loadPublicData(){
+  const res=await fetch(`https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=0`);
+  if(!res.ok) throw new Error(`HTTP ${res.status}`);
+  const rows=parseCSV(await res.text());
+  if(rows.length<2) return;
+  const [header,...dataRows]=rows;
+  sessions=dataRows.map(row=>{
+    const o={}; header.forEach((k,i)=>o[k]=row[i]||'');
+    const venueName=o.venue||'';
+    const venue=KNOWN_VENUES.includes(venueName)?venueName:'Other';
+    return{
+      id:parseInt(o.id)||0, date:o.date||toDateStr(new Date()),
+      time:o.time||'09:00',
+      duration:Math.round(parseFloat(o['duration(hrs)']||o.duration||1))*60,
+      title:o.title||'', level:o.level||'beginner',
+      students:parseInt(o.students)||1, coach:o.coach||'',
+      venue, venueOther:venue==='Other'?venueName:'', court:parseInt(o.court)||1,
+    };
+  });
+  nextId=Math.max(...sessions.map(s=>s.id),0)+1;
 }
 
 function doLogout(){
