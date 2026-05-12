@@ -521,30 +521,43 @@ async function hashPw(str){
   return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
 }
 
+let _gClient=null, _gFallbackTimer=null;
+
 async function enterAdmin(){
   isAdmin=true;
   document.body.classList.add('admin-mode');
   document.getElementById('loginBox').style.display='none';
-  document.getElementById('syncBox').style.display='';
-  document.getElementById('syncIcon').textContent='🔗';
-  document.getElementById('syncMsg').textContent='กรุณาเชื่อมต่อ Google เพื่อโหลดข้อมูล';
-  document.getElementById('syncBtn').style.display='';
-  document.getElementById('syncBtn').textContent='🔗 เชื่อมต่อ Google Sheets';
-}
+  document.getElementById('syncBox').style.display='block';
+  document.getElementById('syncIcon').textContent='⏳';
+  document.getElementById('syncMsg').textContent='กำลังเชื่อมต่อ Google...';
+  document.getElementById('syncBtn').style.display='none';
 
-let _gClient=null;
-function connectGoogle(){
   if(gToken&&Date.now()<gTokenExpiry-60000){afterGoogleAuth();return;}
+
   if(!_gClient) _gClient=google.accounts.oauth2.initTokenClient({
     client_id:CLIENT_ID,
     scope:'https://www.googleapis.com/auth/spreadsheets',
     callback:r=>{
+      clearTimeout(_gFallbackTimer);
       if(r.error){showSyncError(r.error_description||r.error);return;}
       gToken=r.access_token;
       gTokenExpiry=Date.now()+(r.expires_in||3600)*1000;
       afterGoogleAuth();
     },
   });
+  _gClient.requestAccessToken({prompt:''});
+
+  // If popup is blocked (mobile), show manual button after 3s
+  _gFallbackTimer=setTimeout(()=>{
+    document.getElementById('syncIcon').textContent='🔗';
+    document.getElementById('syncMsg').textContent='กรุณาเชื่อมต่อ Google';
+    document.getElementById('syncBtn').style.display='';
+    document.getElementById('syncBtn').textContent='🔗 เชื่อมต่อ Google Sheets';
+  },3000);
+}
+
+function connectGoogle(){
+  if(gToken&&Date.now()<gTokenExpiry-60000){afterGoogleAuth();return;}
   document.getElementById('syncBtn').style.display='none';
   document.getElementById('syncMsg').textContent='กำลังเชื่อมต่อ Google...';
   document.getElementById('syncIcon').textContent='⏳';
@@ -650,19 +663,20 @@ async function loadPublicData(){
 }
 
 function doLogout(){
-  isAdmin=false; gToken=null; gTokenExpiry=0; _gClient=null;
+  clearTimeout(_gFallbackTimer);
+  isAdmin=false; gToken=null; gTokenExpiry=0;
   sessions=[]; nextId=1;
-  selectedCoach=''; selectedVenue='';
+  selectedCoach=''; selectedVenue=''; weekOffset=0;
   document.getElementById('app').style.display='none';
   document.getElementById('loginScreen').style.display='flex';
-  document.getElementById('loginBox').style.display='';
+  document.getElementById('loginBox').style.display='block';
   document.getElementById('syncBox').style.display='none';
   document.getElementById('pwInput').value='';
+  document.getElementById('loginErr').textContent='';
   document.body.classList.remove('admin-mode');
   document.getElementById('logoutBtn').textContent='ออกจากระบบ';
   document.getElementById('coachFilter').value='';
   document.getElementById('venueFilter').value='';
-  weekOffset=0;
 }
 
 const fmtDate=d=>`${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
