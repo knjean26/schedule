@@ -651,7 +651,7 @@ function parseCSV(text){
 }
 
 async function loadPublicData(){
-  const res=await fetch(`https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=0`);
+  const res=await fetch(`https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=Sheet1`);
   if(!res.ok) throw new Error(`HTTP ${res.status}`);
   const rows=parseCSV(await res.text());
   if(rows.length<2) return;
