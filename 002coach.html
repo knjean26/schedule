@@ -514,7 +514,7 @@ let sessions=[];
 let nextId=1;
 
 const saveSessions=()=>{
-  autoSync();
+  pushAndPull();
 };
 async function hashPw(str){
   const buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(str));
@@ -650,7 +650,9 @@ async function loadPublicData(){
 }
 
 function doLogout(){
-  isAdmin=false; gToken=null; gTokenExpiry=0; _gClient=null; selectedCoach=''; selectedVenue='';
+  isAdmin=false; gToken=null; gTokenExpiry=0; _gClient=null;
+  sessions=[]; nextId=1;
+  selectedCoach=''; selectedVenue='';
   document.getElementById('app').style.display='none';
   document.getElementById('loginScreen').style.display='flex';
   document.getElementById('loginBox').style.display='';
@@ -939,10 +941,15 @@ async function doPullFromSheets(token){
 
 async function autoSync(){
   if(!gToken||Date.now()>=gTokenExpiry-60000)return;
+  try{ if(await doPullFromSheets(gToken))render(); }catch(e){}
+}
+
+async function pushAndPull(){
+  if(!gToken||Date.now()>=gTokenExpiry-60000)return;
   try{
     await doSyncToSheets(gToken);
     if(await doPullFromSheets(gToken))render();
-  }catch(e){}
+  }catch(e){showToast('⚠️ Sync ไม่สำเร็จ');}
 }
 
 async function syncToSheets(){
