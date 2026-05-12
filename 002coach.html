@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Pickle Coach – ตารางสอนพิคเคิลบอล</title>
+<title>002 Academy – ตารางสอน</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Sarabun:wght@300;400;600;700&display=swap" rel="stylesheet">
 <script src="https://accounts.google.com/gsi/client" async></script>
 <style>
@@ -192,21 +192,18 @@ body.admin-mode .admin-only { display:flex; flex-direction:column; gap:16px; }
 <div id="loginScreen">
   <div class="login-box" id="loginBox">
     <div class="login-icon">🏓</div>
-    <div class="login-title">PICKLE COACH</div>
-    <div class="login-sub">ระบบตารางสอนพิคเคิลบอล</div>
+    <div class="login-title">002 ACADEMY</div>
+    <div class="login-sub">ระบบตารางสอน</div>
     <input type="password" id="pwInput" placeholder="รหัสผ่านแอดมิน" onkeydown="if(event.key==='Enter')doLogin()">
     <div class="login-error" id="loginErr"></div>
     <button class="btn-login" onclick="doLogin()">🔐 เข้าสู่ระบบแอดมิน</button>
     <div class="public-link">หรือ <a onclick="enterPublic()">👁 ดูตารางแบบสาธารณะ (ไม่ต้องล็อกอิน)</a></div>
   </div>
-  <div class="login-box" id="setupBox" style="display:none">
-    <div class="login-icon">🔑</div>
-    <div class="login-title">ตั้งรหัสผ่าน</div>
-    <div class="login-sub">ครั้งแรก — กรุณาตั้งรหัสผ่านแอดมิน</div>
-    <input type="password" id="setupPw1" placeholder="รหัสผ่านใหม่ (อย่างน้อย 6 ตัวอักษร)" onkeydown="if(event.key==='Enter')setupPw()">
-    <input type="password" id="setupPw2" placeholder="ยืนยันรหัสผ่าน" onkeydown="if(event.key==='Enter')setupPw()">
-    <div class="login-error" id="setupErr"></div>
-    <button class="btn-login" onclick="setupPw()">✅ ตั้งรหัสผ่านและเข้าสู่ระบบ</button>
+
+  <div class="login-box" id="syncBox" style="display:none">
+    <div class="login-icon" id="syncIcon">⏳</div>
+    <div class="login-title">002 ACADEMY</div>
+    <div class="login-sub" id="syncMsg">กำลัง sync ข้อมูลจาก Google Sheets...</div>
   </div>
 </div>
 
@@ -215,7 +212,7 @@ body.admin-mode .admin-only { display:flex; flex-direction:column; gap:16px; }
   <header>
     <div class="logo">
       <div class="paddle-icon">🏓</div>
-      <div><h1>PICKLE COACH</h1><div class="subtitle">ตารางสอนพิคเคิลบอล</div></div>
+      <div><h1>002 ACADEMY</h1><div class="subtitle">ตารางสอน</div></div>
     </div>
     <div class="header-right">
       <div class="mode-badge" id="modeBadge"></div>
@@ -333,15 +330,6 @@ body.admin-mode .admin-only { display:flex; flex-direction:column; gap:16px; }
       <div class="panel">
         <div class="panel-header">⚙️ ตั้งค่า</div>
         <div class="panel-body">
-          <button class="btn-primary" style="margin-bottom:8px" onclick="openChangePw()">🔑 เปลี่ยนรหัสผ่าน</button>
-          <div class="form-group" style="margin-top:14px">
-            <label class="form-label">Google Sheet ID</label>
-            <input class="form-control" id="gsSheetId" placeholder="1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgVE2upms" oninput="saveGsCreds()">
-          </div>
-          <div class="form-group">
-            <label class="form-label">OAuth Client ID</label>
-            <input class="form-control" id="gsClientId" placeholder="xxxx.apps.googleusercontent.com" oninput="saveGsCreds()">
-          </div>
           <button class="btn-primary" style="background:linear-gradient(135deg,#f87171,#fb923c)" onclick="clearAllData()">🗑️ ล้างข้อมูลทั้งหมด</button>
         </div>
       </div>
@@ -429,20 +417,6 @@ body.admin-mode .admin-only { display:flex; flex-direction:column; gap:16px; }
   </div>
 </div>
 
-<!-- Change PW Modal -->
-<div class="modal-overlay" id="pwModal">
-  <div class="modal">
-    <div class="modal-title">🔑 เปลี่ยนรหัสผ่าน</div>
-    <div class="form-group"><label class="form-label">รหัสผ่านปัจจุบัน</label><input class="form-control" id="pwCurrent" type="password"></div>
-    <div class="form-group"><label class="form-label">รหัสผ่านใหม่</label><input class="form-control" id="pwNew" type="password"></div>
-    <div class="form-group"><label class="form-label">ยืนยันรหัสผ่านใหม่</label><input class="form-control" id="pwConfirm" type="password"></div>
-    <div class="login-error" id="pwErr"></div>
-    <div class="modal-actions">
-      <button class="btn-cancel" onclick="closeModal('pwModal')">ยกเลิก</button>
-      <button class="btn-primary" style="flex:1" onclick="savePw()">บันทึก</button>
-    </div>
-  </div>
-</div>
 
 <!-- Duplicate Modal -->
 <div class="modal-overlay" id="dupModal">
@@ -467,8 +441,10 @@ body.admin-mode .admin-only { display:flex; flex-direction:column; gap:16px; }
 <div class="toast" id="toast"></div>
 
 <script>
-const KEY_S='pb_sessions', KEY_P='pb_password';
-const KEY_GS='pb_gsheet_id', KEY_GC='pb_gclient_id', KEY_CV='pb_custom_venues';
+const KEY_S='pb_sessions', KEY_CV='pb_custom_venues';
+const FIXED_PW_HASH='ac9689e2272427085e35b9d3e3e8bed88cb3434828b43b86fc0596cad4c6e270';
+const SHEET_ID='1fCLRpZfE6eaiuAa404GA5WUYXmihVcbVKsjUIIZgSE8';
+const CLIENT_ID='886397941210-1iemf0bqi86nl9lpelkae9d4a8c52aoq.apps.googleusercontent.com';
 const DAY_NAMES=['จันทร์','อังคาร','พุธ','พฤหัสบดี','ศุกร์','เสาร์','อาทิตย์'];
 const KNOWN_VENUES=['Beat Discovery','The Racquet Realm','Club 46'];
 const COACHES=[
@@ -562,8 +538,6 @@ const saveSessions=()=>{
   localStorage.setItem(KEY_S,JSON.stringify(sessions));
   autoSync();
 };
-const isFirstRun=()=>!localStorage.getItem(KEY_P);
-
 async function hashPw(str){
   const buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(str));
   return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
@@ -571,25 +545,33 @@ async function hashPw(str){
 
 async function enterAdmin(){
   isAdmin=true;
+  document.body.classList.add('admin-mode');
+  // Show sync screen while loading data
+  document.getElementById('loginBox').style.display='none';
+  document.getElementById('syncBox').style.display='';
+  document.getElementById('syncMsg').textContent='กำลัง sync ข้อมูลจาก Google Sheets...';
+  document.getElementById('syncIcon').textContent='⏳';
+  try{
+    const token=await getGToken();
+    await doSyncToSheets(token);
+    await doPullFromSheets(token);
+    document.getElementById('syncIcon').textContent='✅';
+    document.getElementById('syncMsg').textContent='Sync สำเร็จ กำลังโหลด...';
+  }catch(e){
+    document.getElementById('syncIcon').textContent='⚠️';
+    document.getElementById('syncMsg').textContent='Sync ไม่สำเร็จ — ใช้ข้อมูล local';
+    await new Promise(r=>setTimeout(r,1500));
+  }
   document.getElementById('loginScreen').style.display='none';
   document.getElementById('app').style.display='block';
-  document.body.classList.add('admin-mode');
   document.getElementById('modeBadge').className='mode-badge mode-admin';
-  if(localStorage.getItem(KEY_GS)&&localStorage.getItem(KEY_GC)){
-    document.getElementById('modeBadge').textContent='⏳ กำลัง sync...';
-    try{
-      const token=await getGToken();
-      await doSyncToSheets(token);
-      await doPullFromSheets(token);
-    }catch(e){showToast('⚠️ Sync ไม่สำเร็จ — ใช้ข้อมูล local');}
-  }
   document.getElementById('modeBadge').textContent='🔐 แอดมิน';
   render();
 }
 
 async function doLogin(){
   const hash=await hashPw(document.getElementById('pwInput').value);
-  if(hash===localStorage.getItem(KEY_P)){
+  if(hash===FIXED_PW_HASH){
     enterAdmin();
   }else{
     document.getElementById('loginErr').textContent='รหัสผ่านไม่ถูกต้อง';
@@ -598,15 +580,6 @@ async function doLogin(){
   }
 }
 
-async function setupPw(){
-  const nw=document.getElementById('setupPw1').value;
-  const cf=document.getElementById('setupPw2').value;
-  const err=document.getElementById('setupErr');
-  if(nw.length<6){err.textContent='ต้องมีอย่างน้อย 6 ตัวอักษร';return;}
-  if(nw!==cf){err.textContent='รหัสผ่านไม่ตรงกัน';return;}
-  localStorage.setItem(KEY_P,await hashPw(nw));
-  enterAdmin();
-}
 
 function enterPublic(){
   isAdmin=false;
@@ -639,7 +612,7 @@ async function changeWeek(d){
   const fDate=document.getElementById('fDate');
   if(fDate) fDate.value=toDateStr(getWeekStart(weekOffset));
   render();
-  if(gToken&&Date.now()<gTokenExpiry-60000&&localStorage.getItem(KEY_GS)){
+  if(gToken&&Date.now()<gTokenExpiry-60000){
     try{await doSyncToSheets(gToken);if(await doPullFromSheets(gToken))render();}catch(e){}
   }
 }
@@ -763,7 +736,6 @@ function render(){
         <div><div class="coach-name">${c.name}</div><div class="coach-specialty">โค้ช</div></div>
         <div class="coach-sessions">${sessions.filter(s=>s.coach===c.name).length}</div>
       </div>`).join('');
-    loadGsCreds();
   }
 }
 
@@ -838,20 +810,6 @@ function closeModal(id){
   editingId=null;
   if(id==='dupModal'){duplicatingId=null;duplicateDates=[];}
 }
-function openChangePw(){document.getElementById('pwModal').classList.add('show');}
-
-async function savePw(){
-  const cur=document.getElementById('pwCurrent').value;
-  const nw=document.getElementById('pwNew').value;
-  const cf=document.getElementById('pwConfirm').value;
-  const err=document.getElementById('pwErr');
-  if(await hashPw(cur)!==localStorage.getItem(KEY_P)){err.textContent='รหัสผ่านปัจจุบันไม่ถูกต้อง';return;}
-  if(nw.length<6){err.textContent='ต้องมีอย่างน้อย 6 ตัวอักษร';return;}
-  if(nw!==cf){err.textContent='รหัสผ่านใหม่ไม่ตรงกัน';return;}
-  localStorage.setItem(KEY_P,await hashPw(nw));
-  ['pwCurrent','pwNew','pwConfirm'].forEach(i=>document.getElementById(i).value='');
-  err.textContent=''; closeModal('pwModal'); showToast('🔑 เปลี่ยนรหัสผ่านแล้ว');
-}
 
 function clearAllData(){
   if(!confirm('ล้างข้อมูลทั้งหมด?\nไม่สามารถกู้คืนได้'))return;
@@ -861,22 +819,11 @@ function clearAllData(){
 }
 
 /* ── Google Sheets ── */
-function loadGsCreds(){
-  document.getElementById('gsSheetId').value=localStorage.getItem(KEY_GS)||'';
-  document.getElementById('gsClientId').value=localStorage.getItem(KEY_GC)||'';
-}
-function saveGsCreds(){
-  localStorage.setItem(KEY_GS,document.getElementById('gsSheetId').value.trim());
-  localStorage.setItem(KEY_GC,document.getElementById('gsClientId').value.trim());
-}
-
 function getGToken(){
   return new Promise((resolve,reject)=>{
     if(gToken&&Date.now()<gTokenExpiry-60000){resolve(gToken);return;}
-    const clientId=localStorage.getItem(KEY_GC);
-    if(!clientId){reject(new Error('กรุณาใส่ OAuth Client ID ก่อน'));return;}
     google.accounts.oauth2.initTokenClient({
-      client_id:clientId,
+      client_id:CLIENT_ID,
       scope:'https://www.googleapis.com/auth/spreadsheets',
       callback:r=>{
         if(r.error){reject(new Error(r.error));return;}
@@ -903,19 +850,17 @@ function sessionToRow(s){
 }
 
 async function doSyncToSheets(token){
-  const sid=localStorage.getItem(KEY_GS); if(!sid)return;
   const rows=[GS_HEADERS,...sessions.map(sessionToRow)];
-  await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sid}/values/${encodeURIComponent(GS_RANGE)}:clear`,
+  await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${encodeURIComponent(GS_RANGE)}:clear`,
     {method:'POST',headers:{Authorization:`Bearer ${token}`}});
-  const res=await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sid}/values/${encodeURIComponent(GS_RANGE)}?valueInputOption=RAW`,
+  const res=await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${encodeURIComponent(GS_RANGE)}?valueInputOption=RAW`,
     {method:'PUT',headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json'},
      body:JSON.stringify({values:rows})});
   if(!res.ok)throw new Error(`Sheets API error ${res.status}`);
 }
 
 async function doPullFromSheets(token){
-  const sid=localStorage.getItem(KEY_GS); if(!sid)return false;
-  const res=await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sid}/values/${encodeURIComponent(GS_RANGE)}`,
+  const res=await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${encodeURIComponent(GS_RANGE)}`,
     {headers:{Authorization:`Bearer ${token}`}});
   if(!res.ok)throw new Error(`Sheets API error ${res.status}`);
   const data=await res.json();
@@ -946,7 +891,6 @@ async function doPullFromSheets(token){
 
 async function autoSync(){
   if(!gToken||Date.now()>=gTokenExpiry-60000)return;
-  if(!localStorage.getItem(KEY_GS))return;
   try{
     await doSyncToSheets(gToken);
     if(await doPullFromSheets(gToken))render();
@@ -954,7 +898,6 @@ async function autoSync(){
 }
 
 async function syncToSheets(){
-  if(!localStorage.getItem(KEY_GS)){showToast('⚠️ กรุณาใส่ Sheet ID ก่อน');return;}
   try{
     showToast('⏳ กำลัง sync...');
     const token=await getGToken();
@@ -965,7 +908,6 @@ async function syncToSheets(){
 }
 
 async function pullFromSheets(){
-  if(!localStorage.getItem(KEY_GS)){showToast('⚠️ กรุณาใส่ Sheet ID ก่อน');return;}
   try{
     showToast('⏳ กำลัง sync...');
     const token=await getGToken();
@@ -976,15 +918,10 @@ async function pullFromSheets(){
 }
 
 /* ── Init ── */
-['editModal','pwModal','dupModal'].forEach(id=>{
+['editModal','dupModal'].forEach(id=>{
   document.getElementById(id).addEventListener('click',function(e){if(e.target===this)closeModal(id);});
 });
 document.getElementById('pwInput').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
-
-if(isFirstRun()){
-  document.getElementById('loginBox').style.display='none';
-  document.getElementById('setupBox').style.display='block';
-}
 </script>
 </body>
 </html>
