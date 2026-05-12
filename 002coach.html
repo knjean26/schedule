@@ -119,10 +119,12 @@ body.admin-mode .admin-only { display:flex; flex-direction:column; gap:16px; }
 .day-date { font-size:.75rem; color:var(--muted); }
 .day-badge { background:linear-gradient(135deg,var(--green),var(--lime)); color:var(--dark); font-size:.65rem; font-weight:700; padding:2px 10px; border-radius:20px; }
 
-.session-item { display:grid; grid-template-columns:80px 1fr auto; align-items:center; gap:10px; padding:11px 18px; border-top:1px solid var(--border); transition:background .15s; animation:fadeIn .3s ease; }
+.session-item { display:grid; grid-template-columns:90px 1fr auto; align-items:center; gap:10px; padding:11px 18px; border-top:1px solid var(--border); transition:background .15s; animation:fadeIn .3s ease; }
 @keyframes fadeIn { from{opacity:0;transform:translateY(-5px)} to{opacity:1;transform:translateY(0)} }
 .session-item:hover { background:rgba(74,222,128,.04); }
-.session-time { font-family:'Bebas Neue',sans-serif; font-size:1.05rem; color:var(--green); letter-spacing:1px; }
+.session-time { display:flex; flex-direction:column; gap:1px; }
+.session-time-start { font-family:'Bebas Neue',sans-serif; font-size:1.05rem; color:var(--green); letter-spacing:1px; line-height:1; }
+.session-time-end { font-size:.68rem; color:var(--muted); letter-spacing:.5px; }
 .session-title { font-size:.875rem; font-weight:600; }
 .session-meta { font-size:.72rem; color:var(--muted); margin-top:2px; }
 .level-badge { font-size:.62rem; font-weight:700; padding:2px 8px; border-radius:6px; text-transform:uppercase; letter-spacing:1px; white-space:nowrap; }
@@ -135,6 +137,10 @@ body.admin-mode .admin-only { display:flex; flex-direction:column; gap:16px; }
 .btn-sm.danger:hover { border-color:var(--red); color:var(--red); }
 .empty-day { padding:14px 18px; color:var(--muted); font-size:.82rem; text-align:center; border-top:1px solid var(--border); }
 
+/* End-time hint */
+.end-time-hint { font-size:.72rem; color:var(--green); padding:4px 0 2px; }
+.dup-tag { display:inline-flex; align-items:center; background:rgba(74,222,128,.15); border:1px solid rgba(74,222,128,.3); color:var(--green); border-radius:6px; padding:3px 8px; font-size:.75rem; font-weight:600; }
+
 /* Panel / Form */
 .panel { background:var(--panel); border:1px solid var(--border); border-radius:14px; overflow:hidden; }
 .panel-header { padding:12px 18px; background:var(--card); border-bottom:1px solid var(--border); font-weight:700; font-size:.8rem; letter-spacing:1px; text-transform:uppercase; color:var(--green); }
@@ -145,6 +151,7 @@ body.admin-mode .admin-only { display:flex; flex-direction:column; gap:16px; }
 .form-control:focus { outline:none; border-color:var(--green); }
 .form-control option { background:var(--card); }
 .form-row { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+.form-row-3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; }
 .btn-primary { width:100%; padding:11px; background:linear-gradient(135deg,var(--green),var(--lime)); color:var(--dark); border:none; border-radius:8px; font-size:.875rem; font-weight:700; cursor:pointer; font-family:'Sarabun',sans-serif; letter-spacing:1px; transition:opacity .2s,transform .1s; }
 .btn-primary:hover { opacity:.9; }
 .btn-primary:active { transform:scale(.98); }
@@ -160,7 +167,7 @@ body.admin-mode .admin-only { display:flex; flex-direction:column; gap:16px; }
 /* Modal */
 .modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.75); backdrop-filter:blur(5px); z-index:300; align-items:center; justify-content:center; }
 .modal-overlay.show { display:flex; }
-.modal { background:var(--panel); border:1px solid var(--border); border-radius:16px; padding:24px; width:90%; max-width:400px; animation:popIn .25s ease; }
+.modal { background:var(--panel); border:1px solid var(--border); border-radius:16px; padding:24px; width:90%; max-width:420px; animation:popIn .25s ease; max-height:90vh; overflow-y:auto; }
 .modal-title { font-family:'Bebas Neue',sans-serif; font-size:1.4rem; color:var(--green); letter-spacing:2px; margin-bottom:18px; }
 .modal-actions { display:flex; gap:10px; margin-top:18px; }
 .btn-cancel { flex:1; padding:10px; background:none; border:1px solid var(--border); color:var(--muted); border-radius:8px; cursor:pointer; font-family:'Sarabun',sans-serif; transition:all .15s; }
@@ -220,6 +227,11 @@ body.admin-mode .admin-only { display:flex; flex-direction:column; gap:16px; }
           <option>โอ๊ต</option><option>เอ๋ย</option><option>โฟล์ค</option>
         </select>
       </div>
+      <div class="coach-filter-wrap">
+        <select id="venueFilter" onchange="applyVenueFilter()">
+          <option value="">📍 ทุกสถานที่</option>
+        </select>
+      </div>
       <div class="week-nav">
         <button class="week-btn" onclick="changeWeek(-1)">‹</button>
         <div class="week-label" id="weekLabel">—</div>
@@ -242,23 +254,75 @@ body.admin-mode .admin-only { display:flex; flex-direction:column; gap:16px; }
       <div class="panel">
         <div class="panel-header">➕ เพิ่มคลาสใหม่</div>
         <div class="panel-body">
-          <div class="form-group"><label class="form-label">ชื่อคลาส</label><input class="form-control" id="fTitle" type="text" placeholder="เช่น เซิร์ฟและรับ"></div>
-          <div class="form-row">
-            <div class="form-group"><label class="form-label">วันที่</label><input class="form-control" id="fDate" type="date"></div>
-            <div class="form-group"><label class="form-label">เวลา</label><input class="form-control" id="fTime" type="time" value="09:00"></div>
+          <div class="form-group">
+            <label class="form-label">ชื่อคลาส</label>
+            <input class="form-control" id="fTitle" type="text" placeholder="เช่น เซิร์ฟและรับ">
           </div>
           <div class="form-row">
-            <div class="form-group"><label class="form-label">ระดับ</label>
-              <select class="form-control" id="fLevel">
-                <option value="beginner">มือใหม่</option><option value="intermediate">กลาง</option><option value="advanced">สูง</option>
+            <div class="form-group">
+              <label class="form-label">วันที่</label>
+              <input class="form-control" id="fDate" type="date">
+            </div>
+            <div class="form-group">
+              <label class="form-label">เวลาเริ่ม</label>
+              <input class="form-control" id="fTime" type="time" value="09:00" oninput="updateEndTime('f')">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">ระยะเวลา</label>
+              <select class="form-control" id="fDuration" onchange="updateEndTime('f')">
+                <option value="60" selected>1 ชั่วโมง</option>
+                <option value="120">2 ชั่วโมง</option>
+                <option value="180">3 ชั่วโมง</option>
+                <option value="240">4 ชั่วโมง</option>
+                <option value="300">5 ชั่วโมง</option>
+                <option value="360">6 ชั่วโมง</option>
               </select>
             </div>
-            <div class="form-group"><label class="form-label">นักเรียน</label><input class="form-control" id="fStudents" type="number" value="4" min="1" max="30"></div>
+            <div class="form-group" style="display:flex;align-items:flex-end">
+              <div class="end-time-hint" id="fEndTime">สิ้นสุด 10:00</div>
+            </div>
           </div>
-          <div class="form-group"><label class="form-label">โค้ช</label>
-            <select class="form-control" id="fCoach"><option>เอก</option><option>เอิ้น</option><option>แทน</option><option>พีท</option><option>แม๊ก</option><option>นิว</option><option>เฟรม</option><option>ภูมิ</option><option>โอ๊ต</option><option>เอ๋ย</option><option>โฟล์ค</option></select>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">ระดับ</label>
+              <select class="form-control" id="fLevel">
+                <option value="beginner">มือใหม่</option>
+                <option value="intermediate">กลาง</option>
+                <option value="advanced">สูง</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">นักเรียน</label>
+              <input class="form-control" id="fStudents" type="number" value="4" min="1" max="30">
+            </div>
           </div>
-          <div class="form-group"><label class="form-label">สนาม / สถานที่</label><input class="form-control" id="fCourt" type="text" placeholder="เช่น สนาม A"></div>
+          <div class="form-group">
+            <label class="form-label">โค้ช</label>
+            <select class="form-control" id="fCoach">
+              <option>เอก</option><option>เอิ้น</option><option>แทน</option><option>พีท</option>
+              <option>แม๊ก</option><option>นิว</option><option>เฟรม</option><option>ภูมิ</option>
+              <option>โอ๊ต</option><option>เอ๋ย</option><option>โฟล์ค</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">สถานที่</label>
+            <select class="form-control" id="fVenue" onchange="toggleVenueOther('f')">
+              <option value="Beat Discovery">Beat Discovery</option>
+              <option value="The Racquet Realm">The Racquet Realm</option>
+              <option value="Club 46">Club 46</option>
+              <option value="Other">อื่นๆ (ระบุเอง)</option>
+            </select>
+          </div>
+          <div class="form-group" id="fVenueOtherWrap" style="display:none">
+            <label class="form-label">ระบุสถานที่</label>
+            <input class="form-control" id="fVenueOther" type="text" placeholder="กรอกชื่อสถานที่">
+          </div>
+          <div class="form-group">
+            <label class="form-label">คอร์ท</label>
+            <input class="form-control" id="fCourt" type="number" value="1" min="1" max="99">
+          </div>
           <button class="btn-primary" onclick="addSession()">+ เพิ่มคลาส</button>
         </div>
       </div>
@@ -270,15 +334,13 @@ body.admin-mode .admin-only { display:flex; flex-direction:column; gap:16px; }
         <div class="panel-header">⚙️ ตั้งค่า</div>
         <div class="panel-body">
           <button class="btn-primary" style="margin-bottom:8px" onclick="openChangePw()">🔑 เปลี่ยนรหัสผ่าน</button>
-          <div class="form-group" style="margin-top:14px"><label class="form-label">Google Sheet ID</label>
+          <div class="form-group" style="margin-top:14px">
+            <label class="form-label">Google Sheet ID</label>
             <input class="form-control" id="gsSheetId" placeholder="1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgVE2upms" oninput="saveGsCreds()">
           </div>
-          <div class="form-group"><label class="form-label">OAuth Client ID</label>
+          <div class="form-group">
+            <label class="form-label">OAuth Client ID</label>
             <input class="form-control" id="gsClientId" placeholder="xxxx.apps.googleusercontent.com" oninput="saveGsCreds()">
-          </div>
-          <div class="form-row" style="margin-bottom:8px">
-            <button class="btn-primary" onclick="syncToSheets()">☁️ Sync ไป Sheets</button>
-            <button class="btn-primary" style="background:linear-gradient(135deg,#60a5fa,#818cf8)" onclick="pullFromSheets()">📥 ดึงจาก Sheets</button>
           </div>
           <button class="btn-primary" style="background:linear-gradient(135deg,#f87171,#fb923c)" onclick="clearAllData()">🗑️ ล้างข้อมูลทั้งหมด</button>
         </div>
@@ -291,21 +353,75 @@ body.admin-mode .admin-only { display:flex; flex-direction:column; gap:16px; }
 <div class="modal-overlay" id="editModal">
   <div class="modal">
     <div class="modal-title">✏️ แก้ไขคลาส</div>
-    <div class="form-group"><label class="form-label">ชื่อคลาส</label><input class="form-control" id="mTitle"></div>
-    <div class="form-group"><label class="form-label">วันที่</label><input class="form-control" id="mDate" type="date"></div>
-    <div class="form-row">
-      <div class="form-group"><label class="form-label">เวลา</label><input class="form-control" id="mTime" type="time"></div>
-      <div class="form-group"><label class="form-label">นักเรียน</label><input class="form-control" id="mStudents" type="number" min="1" max="30"></div>
+    <div class="form-group">
+      <label class="form-label">ชื่อคลาส</label>
+      <input class="form-control" id="mTitle">
     </div>
     <div class="form-row">
-      <div class="form-group"><label class="form-label">ระดับ</label>
-        <select class="form-control" id="mLevel"><option value="beginner">มือใหม่</option><option value="intermediate">กลาง</option><option value="advanced">สูง</option></select>
+      <div class="form-group">
+        <label class="form-label">วันที่</label>
+        <input class="form-control" id="mDate" type="date">
       </div>
-      <div class="form-group"><label class="form-label">โค้ช</label>
-        <select class="form-control" id="mCoach"><option>เอก</option><option>เอิ้น</option><option>แทน</option><option>พีท</option><option>แม๊ก</option><option>นิว</option><option>เฟรม</option><option>ภูมิ</option><option>โอ๊ต</option><option>เอ๋ย</option><option>โฟล์ค</option></select>
+      <div class="form-group">
+        <label class="form-label">เวลาเริ่ม</label>
+        <input class="form-control" id="mTime" type="time" oninput="updateEndTime('m')">
       </div>
     </div>
-    <div class="form-group"><label class="form-label">สนาม / สถานที่</label><input class="form-control" id="mCourt"></div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">ระยะเวลา</label>
+        <select class="form-control" id="mDuration" onchange="updateEndTime('m')">
+          <option value="60" selected>1 ชั่วโมง</option>
+          <option value="120">2 ชั่วโมง</option>
+          <option value="180">3 ชั่วโมง</option>
+          <option value="240">4 ชั่วโมง</option>
+          <option value="300">5 ชั่วโมง</option>
+          <option value="360">6 ชั่วโมง</option>
+        </select>
+      </div>
+      <div class="form-group" style="display:flex;align-items:flex-end">
+        <div class="end-time-hint" id="mEndTime">สิ้นสุด 10:00</div>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">ระดับ</label>
+        <select class="form-control" id="mLevel">
+          <option value="beginner">มือใหม่</option>
+          <option value="intermediate">กลาง</option>
+          <option value="advanced">สูง</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">นักเรียน</label>
+        <input class="form-control" id="mStudents" type="number" min="1" max="30">
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">โค้ช</label>
+      <select class="form-control" id="mCoach">
+        <option>เอก</option><option>เอิ้น</option><option>แทน</option><option>พีท</option>
+        <option>แม๊ก</option><option>นิว</option><option>เฟรม</option><option>ภูมิ</option>
+        <option>โอ๊ต</option><option>เอ๋ย</option><option>โฟล์ค</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">สถานที่</label>
+      <select class="form-control" id="mVenue" onchange="toggleVenueOther('m')">
+        <option value="Beat Discovery">Beat Discovery</option>
+        <option value="The Racquet Realm">The Racquet Realm</option>
+        <option value="Club 46">Club 46</option>
+        <option value="Other">อื่นๆ (ระบุเอง)</option>
+      </select>
+    </div>
+    <div class="form-group" id="mVenueOtherWrap" style="display:none">
+      <label class="form-label">ระบุสถานที่</label>
+      <input class="form-control" id="mVenueOther" type="text" placeholder="กรอกชื่อสถานที่">
+    </div>
+    <div class="form-group">
+      <label class="form-label">คอร์ท</label>
+      <input class="form-control" id="mCourt" type="number" min="1" max="99">
+    </div>
     <div class="modal-actions">
       <button class="btn-cancel" onclick="closeModal('editModal')">ยกเลิก</button>
       <button class="btn-primary" style="flex:1" onclick="saveEdit()">บันทึก</button>
@@ -328,55 +444,114 @@ body.admin-mode .admin-only { display:flex; flex-direction:column; gap:16px; }
   </div>
 </div>
 
+<!-- Duplicate Modal -->
+<div class="modal-overlay" id="dupModal">
+  <div class="modal">
+    <div class="modal-title">📋 ทำสำเนาคลาส</div>
+    <div style="font-size:.85rem;color:var(--muted);margin-bottom:14px" id="dupTitle"></div>
+    <div class="form-group">
+      <label class="form-label">เลือกวันที่ <span id="dupCount" style="color:var(--green)">0/4</span></label>
+      <div style="display:flex;gap:8px">
+        <input class="form-control" id="dupDateInput" type="date" style="flex:1">
+        <button class="btn-primary" style="width:auto;padding:8px 14px;white-space:nowrap" onclick="addDuplicateDate()">+ เพิ่ม</button>
+      </div>
+    </div>
+    <div id="dupDateList" style="display:flex;flex-wrap:wrap;gap:6px;min-height:32px;margin-bottom:4px;align-items:center"></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal('dupModal')">ยกเลิก</button>
+      <button class="btn-primary" style="flex:1" onclick="confirmDuplicate()">✅ ทำสำเนา</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
-const KEY_S = 'pb_sessions', KEY_P = 'pb_password';
-const KEY_GS = 'pb_gsheet_id', KEY_GC = 'pb_gclient_id';
-const DAY_NAMES = ['จันทร์','อังคาร','พุธ','พฤหัสบดี','ศุกร์','เสาร์','อาทิตย์'];
-const COACHES = [
+const KEY_S='pb_sessions', KEY_P='pb_password';
+const KEY_GS='pb_gsheet_id', KEY_GC='pb_gclient_id', KEY_CV='pb_custom_venues';
+const DAY_NAMES=['จันทร์','อังคาร','พุธ','พฤหัสบดี','ศุกร์','เสาร์','อาทิตย์'];
+const KNOWN_VENUES=['Beat Discovery','The Racquet Realm','Club 46'];
+const COACHES=[
   {name:'เอก',emoji:'🟢'},{name:'เอิ้น',emoji:'🔵'},{name:'แทน',emoji:'🟡'},
   {name:'พีท',emoji:'🟠'},{name:'แม๊ก',emoji:'🔴'},{name:'นิว',emoji:'🟣'},
   {name:'เฟรม',emoji:'🟤'},{name:'ภูมิ',emoji:'⚪'},{name:'โอ๊ต',emoji:'🟢'},
   {name:'เอ๋ย',emoji:'🔵'},{name:'โฟล์ค',emoji:'🟡'},
 ];
 
-const toDateStr = d => d.toISOString().slice(0,10);
+const toDateStr=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 
 function getWeekStart(off=0){
-  const now=new Date(), day=now.getDay();
+  const now=new Date(),day=now.getDay();
   const mon=new Date(now);
   mon.setDate(now.getDate()-(day===0?6:day-1)+off*7);
   mon.setHours(0,0,0,0); return mon;
 }
 
-/* DEF_SESSIONS use real dates relative to current week */
+function calcEndTime(startTime,durationMins){
+  const[h,m]=startTime.split(':').map(Number);
+  const tot=h*60+m+parseInt(durationMins||60);
+  return `${String(Math.floor(tot/60)%24).padStart(2,'0')}:${String(tot%60).padStart(2,'0')}`;
+}
+function updateEndTime(p){
+  const t=document.getElementById(p+'Time').value;
+  const d=document.getElementById(p+'Duration').value;
+  if(t) document.getElementById(p+'EndTime').textContent=`สิ้นสุด ${calcEndTime(t,d)}`;
+}
+function toggleVenueOther(p){
+  const isOther=document.getElementById(p+'Venue').value==='Other';
+  document.getElementById(p+'VenueOtherWrap').style.display=isOther?'block':'none';
+}
+const getVenueName=s=>s.venue==='Other'?(s.venueOther||''):(s.venue||'');
+function getCustomVenues(){try{return JSON.parse(localStorage.getItem(KEY_CV))||[];}catch{return[];}}
+function saveCustomVenue(name){
+  if(!name||KNOWN_VENUES.includes(name))return;
+  const cv=getCustomVenues();
+  if(!cv.includes(name)){cv.push(name);localStorage.setItem(KEY_CV,JSON.stringify(cv));}
+}
+function buildVenueSelect(id,current){
+  const sel=document.getElementById(id); if(!sel)return;
+  const opts=[...KNOWN_VENUES,...getCustomVenues()];
+  sel.innerHTML=opts.map(v=>`<option value="${v}"${v===current?' selected':''}>${v}</option>`).join('')
+    +`<option value="Other"${current==='Other'?' selected':''}>อื่นๆ (ระบุเอง)</option>`;
+}
+
+/* DEF_SESSIONS with real dates */
 const _ws0=getWeekStart(0);
 const _d=idx=>{const d=new Date(_ws0);d.setDate(_ws0.getDate()+idx);return toDateStr(d);};
 const DEF_SESSIONS=[
-  {id:1,date:_d(0),time:'08:00',title:'พิคเคิลบอลเบื้องต้น',level:'beginner',students:6,coach:'เอก',court:'สนาม A'},
-  {id:2,date:_d(0),time:'10:00',title:'เทคนิคการดริป',level:'intermediate',students:4,coach:'เอิ้น',court:'สนาม B'},
-  {id:3,date:_d(1),time:'09:00',title:'คลาสสแมช',level:'advanced',students:3,coach:'เอิ้น',court:'สนาม A'},
-  {id:4,date:_d(2),time:'08:30',title:'ฝึกเซิร์ฟ',level:'beginner',students:8,coach:'เอก',court:'สนาม C'},
-  {id:5,date:_d(3),time:'17:00',title:'ดับเบิ้ลกลยุทธ์',level:'intermediate',students:4,coach:'แทน',court:'สนาม B'},
-  {id:6,date:_d(5),time:'07:00',title:'เวิร์กช็อปเช้าวันเสาร์',level:'beginner',students:10,coach:'เอก',court:'สนาม A'},
-  {id:7,date:_d(6),time:'09:00',title:'คลาสพิเศษ',level:'advanced',students:4,coach:'แทน',court:'สนาม B'},
+  {id:1,date:_d(0),time:'08:00',duration:60,title:'พิคเคิลบอลเบื้องต้น',level:'beginner',students:6,coach:'เอก',venue:'Beat Discovery',venueOther:'',court:1},
+  {id:2,date:_d(0),time:'10:00',duration:60,title:'เทคนิคการดริป',level:'intermediate',students:4,coach:'เอิ้น',venue:'Beat Discovery',venueOther:'',court:2},
+  {id:3,date:_d(1),time:'09:00',duration:120,title:'คลาสสแมช',level:'advanced',students:3,coach:'เอิ้น',venue:'The Racquet Realm',venueOther:'',court:1},
+  {id:4,date:_d(2),time:'08:30',duration:60,title:'ฝึกเซิร์ฟ',level:'beginner',students:8,coach:'เอก',venue:'Club 46',venueOther:'',court:1},
+  {id:5,date:_d(3),time:'17:00',duration:60,title:'ดับเบิ้ลกลยุทธ์',level:'intermediate',students:4,coach:'แทน',venue:'The Racquet Realm',venueOther:'',court:3},
+  {id:6,date:_d(5),time:'07:00',duration:120,title:'เวิร์กช็อปเช้าวันเสาร์',level:'beginner',students:10,coach:'เอก',venue:'Beat Discovery',venueOther:'',court:1},
+  {id:7,date:_d(6),time:'09:00',duration:120,title:'คลาสพิเศษ',level:'advanced',students:4,coach:'แทน',venue:'Club 46',venueOther:'',court:2},
 ];
 
-let isAdmin=false, weekOffset=0, editingId=null, selectedCoach='';
+let isAdmin=false, weekOffset=0, editingId=null, selectedCoach='', selectedVenue='';
+let duplicatingId=null, duplicateDates=[];
 let gToken=null, gTokenExpiry=0;
 
-/* Load sessions; migrate old dayIdx→date format */
+/* Load + migrate old sessions */
 let sessions=(()=>{
   try{
     let s=JSON.parse(localStorage.getItem(KEY_S));
     if(!s) return DEF_SESSIONS.map(x=>({...x}));
     const ws=getWeekStart(0);
     return s.map(sess=>{
+      /* dayIdx → date migration */
       if(!sess.date && sess.dayIdx!==undefined){
         const d=new Date(ws); d.setDate(ws.getDate()+sess.dayIdx);
-        return {...sess, date:toDateStr(d), dayIdx:undefined};
+        sess={...sess,date:toDateStr(d)};
+        delete sess.dayIdx;
       }
+      /* court → venue/court migration */
+      if(!sess.venue && sess.court){
+        const v=KNOWN_VENUES.includes(sess.court)?sess.court:'Other';
+        sess={...sess,venue:v,venueOther:v==='Other'?sess.court:'',court:1};
+      }
+      if(!sess.duration) sess={...sess,duration:60};
+      if(!sess.venueOther) sess={...sess,venueOther:''};
       return sess;
     });
   }catch{return DEF_SESSIONS.map(x=>({...x}));}
@@ -394,12 +569,20 @@ async function hashPw(str){
   return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
 }
 
-function enterAdmin(){
+async function enterAdmin(){
   isAdmin=true;
   document.getElementById('loginScreen').style.display='none';
   document.getElementById('app').style.display='block';
   document.body.classList.add('admin-mode');
   document.getElementById('modeBadge').className='mode-badge mode-admin';
+  if(localStorage.getItem(KEY_GS)&&localStorage.getItem(KEY_GC)){
+    document.getElementById('modeBadge').textContent='⏳ กำลัง sync...';
+    try{
+      const token=await getGToken();
+      await doSyncToSheets(token);
+      await doPullFromSheets(token);
+    }catch(e){showToast('⚠️ Sync ไม่สำเร็จ — ใช้ข้อมูล local');}
+  }
   document.getElementById('modeBadge').textContent='🔐 แอดมิน';
   render();
 }
@@ -437,32 +620,73 @@ function enterPublic(){
 }
 
 function doLogout(){
-  isAdmin=false; gToken=null; gTokenExpiry=0; selectedCoach='';
+  isAdmin=false; gToken=null; gTokenExpiry=0; selectedCoach=''; selectedVenue='';
   document.getElementById('app').style.display='none';
   document.getElementById('loginScreen').style.display='flex';
   document.getElementById('pwInput').value='';
   document.body.classList.remove('admin-mode');
   document.getElementById('logoutBtn').textContent='ออกจากระบบ';
   document.getElementById('coachFilter').value='';
+  document.getElementById('venueFilter').value='';
   weekOffset=0;
 }
 
-const fmtDate=d=>d.toLocaleDateString('th-TH',{day:'numeric',month:'short'});
+const fmtDate=d=>`${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
 const lvlLabel=l=>({beginner:'มือใหม่',intermediate:'กลาง',advanced:'สูง'}[l]||l);
 
-function changeWeek(d){
+async function changeWeek(d){
   weekOffset+=d;
-  /* Shift the add-form date to Monday of the new week */
   const fDate=document.getElementById('fDate');
   if(fDate) fDate.value=toDateStr(getWeekStart(weekOffset));
   render();
+  if(gToken&&Date.now()<gTokenExpiry-60000&&localStorage.getItem(KEY_GS)){
+    try{await doSyncToSheets(gToken);if(await doPullFromSheets(gToken))render();}catch(e){}
+  }
 }
-
 function applyCoachFilter(){
   selectedCoach=document.getElementById('coachFilter').value;
   render();
 }
-
+function applyVenueFilter(){
+  selectedVenue=document.getElementById('venueFilter').value;
+  render();
+}
+function openDuplicate(id){
+  const s=sessions.find(x=>x.id===id); if(!s)return;
+  duplicatingId=id; duplicateDates=[];
+  document.getElementById('dupTitle').textContent=`"${s.title}"`;
+  document.getElementById('dupDateInput').value='';
+  renderDupDates();
+  document.getElementById('dupModal').classList.add('show');
+}
+function addDuplicateDate(){
+  const val=document.getElementById('dupDateInput').value;
+  if(!val){showToast('⚠️ กรุณาเลือกวันที่');return;}
+  if(duplicateDates.includes(val)){showToast('⚠️ วันที่นี้มีอยู่แล้ว');return;}
+  if(duplicateDates.length>=4){showToast('⚠️ เพิ่มได้สูงสุด 4 วัน');return;}
+  duplicateDates.push(val);
+  renderDupDates();
+  document.getElementById('dupDateInput').value='';
+}
+function removeDuplicateDate(date){
+  duplicateDates=duplicateDates.filter(d=>d!==date);
+  renderDupDates();
+}
+function renderDupDates(){
+  document.getElementById('dupDateList').innerHTML=duplicateDates.length===0
+    ?'<span style="color:var(--muted);font-size:.8rem">ยังไม่ได้เลือกวันที่</span>'
+    :duplicateDates.map(d=>`<span class="dup-tag">${fmtDate(new Date(d+'T00:00:00'))} <span onclick="removeDuplicateDate('${d}')" style="cursor:pointer;margin-left:4px;opacity:.7">×</span></span>`).join('');
+  document.getElementById('dupCount').textContent=`${duplicateDates.length}/4`;
+}
+function confirmDuplicate(){
+  if(!duplicateDates.length){showToast('⚠️ กรุณาเลือกอย่างน้อย 1 วัน');return;}
+  const s=sessions.find(x=>x.id===duplicatingId); if(!s)return;
+  duplicateDates.forEach(date=>sessions.push({...s,id:nextId++,date}));
+  saveSessions();
+  closeModal('dupModal');
+  showToast(`✅ ทำสำเนา ${duplicateDates.length} คลาสแล้ว`);
+  render();
+}
 function showToast(msg){
   const t=document.getElementById('toast');
   t.textContent=msg; t.classList.add('show');
@@ -470,16 +694,21 @@ function showToast(msg){
 }
 
 function render(){
-  const ws=getWeekStart(weekOffset), we=new Date(ws);
-  we.setDate(ws.getDate()+6); we.setHours(23,59,59,999);
-
+  const ws=getWeekStart(weekOffset);
+  const wsStr=toDateStr(ws), weStr=toDateStr(new Date(ws.getTime()+6*864e5));
   document.getElementById('weekLabel').textContent=`${fmtDate(ws)} – ${fmtDate(new Date(ws.getTime()+6*864e5))}`;
   document.getElementById('statTotal').textContent=sessions.length;
   document.getElementById('statStudents').textContent=sessions.reduce((a,s)=>a+s.students,0);
   document.getElementById('statHours').textContent=sessions.length;
 
-  /* Sessions belonging to this week only */
-  const weekSessions=sessions.filter(s=>{const d=new Date(s.date);return d>=ws&&d<=we;});
+  const weekSessions=sessions.filter(s=>s.date>=wsStr&&s.date<=weStr);
+
+  /* Rebuild venue filter options from all sessions */
+  const venueEl=document.getElementById('venueFilter');
+  const prevVenue=venueEl.value;
+  const allVenues=[...new Set(sessions.map(s=>getVenueName(s)).filter(Boolean))].sort();
+  venueEl.innerHTML='<option value="">📍 ทุกสถานที่</option>'
+    +allVenues.map(v=>`<option value="${v}"${v===prevVenue?' selected':''}>${v}</option>`).join('');
 
   const cal=document.getElementById('calendarSection');
   cal.innerHTML='';
@@ -488,6 +717,7 @@ function render(){
     const dateStr=toDateStr(dd);
     let ds=weekSessions.filter(s=>s.date===dateStr);
     if(selectedCoach) ds=ds.filter(s=>s.coach===selectedCoach);
+    if(selectedVenue) ds=ds.filter(s=>getVenueName(s)===selectedVenue);
     ds=ds.sort((a,b)=>a.time.localeCompare(b.time));
 
     const card=document.createElement('div');
@@ -500,15 +730,19 @@ function render(){
       <div>
         ${ds.length?ds.map(s=>`
         <div class="session-item">
-          <div class="session-time">${s.time}</div>
+          <div class="session-time">
+            <div class="session-time-start">${s.time}</div>
+            <div class="session-time-end">–${calcEndTime(s.time,s.duration||60)}</div>
+          </div>
           <div>
             <div class="session-title">${s.title}</div>
-            <div class="session-meta">👤 ${s.coach} &nbsp;·&nbsp; 📍 ${s.court} &nbsp;·&nbsp; 👥 ${s.students} คน</div>
+            <div class="session-meta">👤 ${s.coach} &nbsp;·&nbsp; 📍 ${getVenueName(s)} · Court ${s.court||1} &nbsp;·&nbsp; 👥 ${s.students} คน</div>
           </div>
           <div style="text-align:right">
             <span class="level-badge level-${s.level}">${lvlLabel(s.level)}</span>
             ${isAdmin?`<div class="session-actions">
               <button class="btn-sm" onclick="openEdit(${s.id})">✏️</button>
+              <button class="btn-sm" onclick="openDuplicate(${s.id})">📋</button>
               <button class="btn-sm danger" onclick="delSession(${s.id})">🗑️</button>
             </div>`:''}
           </div>
@@ -518,9 +752,10 @@ function render(){
   }
 
   if(isAdmin){
-    /* Default add-form date to Monday of current week view */
     const fDate=document.getElementById('fDate');
-    if(!fDate.value) fDate.value=toDateStr(ws);
+    if(!fDate.value) fDate.value=toDateStr(new Date());
+    updateEndTime('f');
+    buildVenueSelect('fVenue',document.getElementById('fVenue').value||'Beat Discovery');
 
     document.getElementById('coachList').innerHTML=COACHES.map(c=>`
       <div class="coach-item">
@@ -535,20 +770,26 @@ function render(){
 function addSession(){
   const date=document.getElementById('fDate').value;
   const title=document.getElementById('fTitle').value.trim();
+  const venue=document.getElementById('fVenue').value;
+  const venueOther=venue==='Other'?document.getElementById('fVenueOther').value.trim():'';
   if(!date){showToast('⚠️ กรุณาเลือกวันที่ก่อน');return;}
   if(!title){showToast('⚠️ กรุณาใส่ชื่อคลาส');return;}
+  if(venue==='Other'&&!venueOther){showToast('⚠️ กรุณาระบุสถานที่');return;}
   sessions.push({
     id:nextId++, date,
     time:document.getElementById('fTime').value,
+    duration:parseInt(document.getElementById('fDuration').value)||60,
     title,
     level:document.getElementById('fLevel').value,
     students:parseInt(document.getElementById('fStudents').value)||1,
     coach:document.getElementById('fCoach').value,
-    court:document.getElementById('fCourt').value||'สนาม A',
+    venue, venueOther,
+    court:parseInt(document.getElementById('fCourt').value)||1,
   });
+  if(venue==='Other'&&venueOther) saveCustomVenue(venueOther);
   saveSessions();
   document.getElementById('fTitle').value='';
-  document.getElementById('fCourt').value='';
+  document.getElementById('fVenueOther').value='';
   showToast('✅ เพิ่มคลาสแล้ว');
   render();
 }
@@ -563,26 +804,40 @@ function openEdit(id){
   document.getElementById('mTitle').value=s.title;
   document.getElementById('mDate').value=s.date;
   document.getElementById('mTime').value=s.time;
+  document.getElementById('mDuration').value=s.duration||60;
   document.getElementById('mStudents').value=s.students;
   document.getElementById('mLevel').value=s.level;
   document.getElementById('mCoach').value=s.coach;
-  document.getElementById('mCourt').value=s.court;
+  buildVenueSelect('mVenue',s.venue||'Beat Discovery');
+  document.getElementById('mVenueOther').value=s.venueOther||'';
+  document.getElementById('mVenueOtherWrap').style.display=s.venue==='Other'?'block':'none';
+  document.getElementById('mCourt').value=s.court||1;
+  updateEndTime('m');
   document.getElementById('editModal').classList.add('show');
 }
 
 function saveEdit(){
   const s=sessions.find(x=>x.id===editingId); if(!s)return;
+  const venue=document.getElementById('mVenue').value;
+  const venueOther=venue==='Other'?document.getElementById('mVenueOther').value.trim():'';
   s.title=document.getElementById('mTitle').value.trim()||s.title;
   s.date=document.getElementById('mDate').value||s.date;
   s.time=document.getElementById('mTime').value;
+  s.duration=parseInt(document.getElementById('mDuration').value)||60;
   s.students=parseInt(document.getElementById('mStudents').value)||1;
   s.level=document.getElementById('mLevel').value;
   s.coach=document.getElementById('mCoach').value;
-  s.court=document.getElementById('mCourt').value;
+  s.venue=venue; s.venueOther=venueOther;
+  if(venue==='Other'&&venueOther) saveCustomVenue(venueOther);
+  s.court=parseInt(document.getElementById('mCourt').value)||1;
   saveSessions(); closeModal('editModal'); showToast('✅ บันทึกแล้ว'); render();
 }
 
-function closeModal(id){document.getElementById(id).classList.remove('show');editingId=null;}
+function closeModal(id){
+  document.getElementById(id).classList.remove('show');
+  editingId=null;
+  if(id==='dupModal'){duplicatingId=null;duplicateDates=[];}
+}
 function openChangePw(){document.getElementById('pwModal').classList.add('show');}
 
 async function savePw(){
@@ -633,12 +888,23 @@ function getGToken(){
   });
 }
 
-const GS_RANGE='Sheet1!A1:H';
-const GS_HEADERS=['id','date','time','title','level','students','coach','court'];
+/* Columns: id | date | time | duration | title | level | students | coach | venue | court */
+const GS_RANGE='Sheet1!A1:K';
+const GS_HEADERS=['id','date','time','finishTime','duration(hrs)','title','level','students','coach','venue','court'];
+
+function sessionToRow(s){
+  return [
+    String(s.id), s.date, s.time,
+    calcEndTime(s.time,s.duration||60),
+    String(Math.round((s.duration||60)/60)),
+    s.title, s.level, String(s.students),
+    s.coach, getVenueName(s), String(s.court||1),
+  ];
+}
 
 async function doSyncToSheets(token){
   const sid=localStorage.getItem(KEY_GS); if(!sid)return;
-  const rows=[GS_HEADERS,...sessions.map(s=>GS_HEADERS.map(k=>String(s[k]||'')))];
+  const rows=[GS_HEADERS,...sessions.map(sessionToRow)];
   await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sid}/values/${encodeURIComponent(GS_RANGE)}:clear`,
     {method:'POST',headers:{Authorization:`Bearer ${token}`}});
   const res=await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sid}/values/${encodeURIComponent(GS_RANGE)}?valueInputOption=RAW`,
@@ -647,17 +913,53 @@ async function doSyncToSheets(token){
   if(!res.ok)throw new Error(`Sheets API error ${res.status}`);
 }
 
+async function doPullFromSheets(token){
+  const sid=localStorage.getItem(KEY_GS); if(!sid)return false;
+  const res=await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sid}/values/${encodeURIComponent(GS_RANGE)}`,
+    {headers:{Authorization:`Bearer ${token}`}});
+  if(!res.ok)throw new Error(`Sheets API error ${res.status}`);
+  const data=await res.json();
+  if(!data.values||data.values.length<2)return false;
+  const[header,...rows]=data.values;
+  sessions=rows.map(row=>{
+    const o={}; header.forEach((k,i)=>o[k]=row[i]||'');
+    const venueName=o.venue||'';
+    const venue=KNOWN_VENUES.includes(venueName)?venueName:'Other';
+    const venueOther=venue==='Other'?venueName:'';
+    return{
+      id:parseInt(o.id)||0,
+      date:o.date||toDateStr(new Date()),
+      time:o.time||'09:00',
+      duration:Math.round(parseFloat(o['duration(hrs)']||o.duration||1))*60,
+      title:o.title||'',
+      level:o.level||'beginner',
+      students:parseInt(o.students)||1,
+      coach:o.coach||'',
+      venue, venueOther,
+      court:parseInt(o.court)||1,
+    };
+  });
+  nextId=Math.max(...sessions.map(s=>s.id),0)+1;
+  localStorage.setItem(KEY_S,JSON.stringify(sessions));
+  return true;
+}
+
 async function autoSync(){
   if(!gToken||Date.now()>=gTokenExpiry-60000)return;
   if(!localStorage.getItem(KEY_GS))return;
-  try{await doSyncToSheets(gToken);}catch(e){}
+  try{
+    await doSyncToSheets(gToken);
+    if(await doPullFromSheets(gToken))render();
+  }catch(e){}
 }
 
 async function syncToSheets(){
   if(!localStorage.getItem(KEY_GS)){showToast('⚠️ กรุณาใส่ Sheet ID ก่อน');return;}
   try{
     showToast('⏳ กำลัง sync...');
-    await doSyncToSheets(await getGToken());
+    const token=await getGToken();
+    await doSyncToSheets(token);
+    if(await doPullFromSheets(token))render();
     showToast('✅ Sync ไป Sheets แล้ว');
   }catch(e){showToast('❌ '+e.message);}
 }
@@ -665,28 +967,16 @@ async function syncToSheets(){
 async function pullFromSheets(){
   if(!localStorage.getItem(KEY_GS)){showToast('⚠️ กรุณาใส่ Sheet ID ก่อน');return;}
   try{
-    showToast('⏳ กำลังดึงข้อมูล...');
+    showToast('⏳ กำลัง sync...');
     const token=await getGToken();
-    const res=await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${localStorage.getItem(KEY_GS)}/values/${encodeURIComponent(GS_RANGE)}`,
-      {headers:{Authorization:`Bearer ${token}`}});
-    if(!res.ok)throw new Error(`Sheets API error ${res.status}`);
-    const data=await res.json();
-    if(!data.values||data.values.length<2){showToast('⚠️ ไม่มีข้อมูลใน Sheet');return;}
-    const[header,...rows]=data.values;
-    sessions=rows.map(row=>{
-      const o={}; header.forEach((k,i)=>o[k]=row[i]||'');
-      return{id:parseInt(o.id)||0,date:o.date||toDateStr(new Date()),time:o.time||'09:00',
-             title:o.title||'',level:o.level||'beginner',students:parseInt(o.students)||1,
-             coach:o.coach||'',court:o.court||''};
-    });
-    nextId=Math.max(...sessions.map(s=>s.id),0)+1;
-    localStorage.setItem(KEY_S,JSON.stringify(sessions));
-    render(); showToast('✅ ดึงข้อมูลจาก Sheets แล้ว');
+    await doSyncToSheets(token);
+    if(await doPullFromSheets(token))render();
+    showToast('✅ Sync เสร็จแล้ว');
   }catch(e){showToast('❌ '+e.message);}
 }
 
 /* ── Init ── */
-['editModal','pwModal'].forEach(id=>{
+['editModal','pwModal','dupModal'].forEach(id=>{
   document.getElementById(id).addEventListener('click',function(e){if(e.target===this)closeModal(id);});
 });
 document.getElementById('pwInput').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
