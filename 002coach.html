@@ -672,7 +672,7 @@ async function changeWeek(d){
   if(fDate) fDate.value=toDateStr(getWeekStart(weekOffset));
   render();
   if(gToken&&Date.now()<gTokenExpiry-60000){
-    try{await doSyncToSheets(gToken);if(await doPullFromSheets(gToken))render();}catch(e){}
+    try{if(await doPullFromSheets(gToken))render();}catch(e){}
   }
 }
 function applyCoachFilter(){
@@ -898,6 +898,7 @@ function sessionToRow(s){
 }
 
 async function doSyncToSheets(token){
+  if(!sessions.length) return;
   const rows=[GS_HEADERS,...sessions.map(sessionToRow)];
   await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${encodeURIComponent(GS_RANGE)}:clear`,
     {method:'POST',headers:{Authorization:`Bearer ${token}`}});
