@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pickle Coach – ตารางสอนพิคเคิลบอล</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Sarabun:wght@300;400;600;700&display=swap" rel="stylesheet">
+<script src="https://accounts.google.com/gsi/client" async></script>
+<style>
+:root {
+  --green: #4ade80;
+  --lime: #a3e635;
+  --dark: #080d08;
+  --panel: #0f160f;
+  --card: #141f14;
+  --border: #243024;
+  --text: #e2f0e2;
+  --muted: #6b8f6b;
+  --accent: #ff6b35;
+  --red: #f87171;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:var(--dark); color:var(--text); font-family:'Sarabun',sans-serif; min-height:100vh; }
+
+body::before {
+  content:''; position:fixed; inset:0; pointer-events:none; z-index:0;
+  background-image: linear-gradient(rgba(74,222,128,.025) 1px, transparent 1px),
+                    linear-gradient(90deg, rgba(74,222,128,.025) 1px, transparent 1px);
+  background-size: 56px 56px;
+}
+
+/* LOGIN */
+#loginScreen {
+  position:fixed; inset:0; z-index:200;
+  display:flex; align-items:center; justify-content:center;
+  background: radial-gradient(ellipse at 50% 40%, rgba(74,222,128,.08) 0%, var(--dark) 70%);
+}
+.login-box {
+  background:var(--panel); border:1px solid var(--border);
+  border-radius:20px; padding:40px 36px; width:90%; max-width:380px;
+  text-align:center; box-shadow:0 0 60px rgba(74,222,128,.1);
+  animation:popIn .4s cubic-bezier(.34,1.56,.64,1);
+}
+@keyframes popIn { from{opacity:0;transform:scale(.88)} to{opacity:1;transform:scale(1)} }
+.login-icon { font-size:3rem; margin-bottom:12px; filter:drop-shadow(0 0 16px rgba(74,222,128,.6)); }
+.login-title { font-family:'Bebas Neue',sans-serif; font-size:2rem; letter-spacing:3px; color:var(--green); }
+.login-sub { font-size:.8rem; color:var(--muted); margin-bottom:28px; letter-spacing:1px; }
+.login-box input {
+  width:100%; background:var(--card); border:1px solid var(--border);
+  color:var(--text); border-radius:10px; padding:12px 16px;
+  font-size:1rem; font-family:'Sarabun',sans-serif; margin-bottom:12px; transition:border-color .2s;
+}
+.login-box input:focus { outline:none; border-color:var(--green); }
+.login-error { color:var(--red); font-size:.8rem; margin-bottom:10px; min-height:18px; }
+.btn-login {
+  width:100%; padding:13px;
+  background:linear-gradient(135deg,var(--green),var(--lime));
+  color:var(--dark); border:none; border-radius:10px;
+  font-size:1rem; font-weight:700; cursor:pointer; font-family:'Sarabun',sans-serif;
+  letter-spacing:1px; transition:opacity .2s,transform .1s;
+}
+.btn-login:hover { opacity:.9; }
+.btn-login:active { transform:scale(.97); }
+.public-link { margin-top:18px; font-size:.8rem; color:var(--muted); }
+.public-link a { color:var(--green); cursor:pointer; text-decoration:none; font-weight:600; }
+.public-link a:hover { text-decoration:underline; }
+
+/* APP */
+#app { position:relative; z-index:1; max-width:1100px; margin:0 auto; padding:24px 16px; display:none; }
+header {
+  display:flex; align-items:center; justify-content:space-between;
+  margin-bottom:28px; padding-bottom:18px; border-bottom:1px solid var(--border);
+  flex-wrap:wrap; gap:12px;
+}
+.logo { display:flex; align-items:center; gap:14px; }
+.paddle-icon {
+  width:50px; height:50px; background:linear-gradient(135deg,var(--green),var(--lime));
+  border-radius:12px 12px 20px 12px; display:flex; align-items:center; justify-content:center;
+  font-size:24px; box-shadow:0 0 24px rgba(74,222,128,.4); animation:glow 3s ease-in-out infinite;
+}
+@keyframes glow { 0%,100%{box-shadow:0 0 24px rgba(74,222,128,.4)} 50%{box-shadow:0 0 40px rgba(74,222,128,.7)} }
+h1 { font-family:'Bebas Neue',sans-serif; font-size:2rem; letter-spacing:3px;
+     background:linear-gradient(135deg,var(--green),var(--lime));
+     -webkit-background-clip:text; -webkit-text-fill-color:transparent; line-height:1; }
+.subtitle { font-size:.75rem; color:var(--muted); letter-spacing:2px; text-transform:uppercase; }
+.header-right { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+.mode-badge { display:flex; align-items:center; gap:6px; padding:6px 14px; border-radius:20px; font-size:.75rem; font-weight:700; letter-spacing:1px; text-transform:uppercase; }
+.mode-admin { background:rgba(74,222,128,.15); border:1px solid rgba(74,222,128,.4); color:var(--green); }
+.mode-public { background:rgba(163,230,53,.1); border:1px solid rgba(163,230,53,.3); color:var(--lime); }
+.week-nav { display:flex; align-items:center; gap:8px; background:var(--panel); border:1px solid var(--border); border-radius:10px; padding:8px 12px; }
+.week-btn { background:none; border:1px solid var(--border); color:var(--green); border-radius:7px; width:30px; height:30px; cursor:pointer; font-size:14px; transition:all .2s; display:flex; align-items:center; justify-content:center; }
+.week-btn:hover { background:var(--green); color:var(--dark); border-color:var(--green); }
+.week-label { font-size:.85rem; font-weight:600; min-width:170px; text-align:center; }
+.btn-logout { background:none; border:1px solid var(--border); color:var(--muted); border-radius:8px; padding:7px 14px; cursor:pointer; font-size:.8rem; font-family:'Sarabun',sans-serif; transition:all .2s; }
+.btn-logout:hover { border-color:var(--red); color:var(--red); }
+
+/* Stats */
+.stats-bar { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:24px; }
+.stat-card { background:var(--panel); border:1px solid var(--border); border-radius:12px; padding:14px; text-align:center; transition:border-color .2s; }
+.stat-card:hover { border-color:var(--green); }
+.stat-num { font-family:'Bebas Neue',sans-serif; font-size:1.9rem; color:var(--green); line-height:1; }
+.stat-label { font-size:.72rem; color:var(--muted); margin-top:3px; }
+
+/* Main */
+.main-grid { display:grid; grid-template-columns:1fr 320px; gap:18px; }
+.admin-only { display:none; }
+body.admin-mode .admin-only { display:flex; flex-direction:column; gap:16px; }
+
+/* Day cards */
+.calendar-section { display:flex; flex-direction:column; gap:14px; }
+.day-card { background:var(--panel); border:1px solid var(--border); border-radius:14px; overflow:hidden; transition:border-color .2s; }
+.day-card.has-sessions { border-color:rgba(74,222,128,.25); }
+.day-card:hover { border-color:rgba(74,222,128,.5); }
+.day-header { display:flex; align-items:center; justify-content:space-between; padding:12px 18px; background:var(--card); }
+.day-name { font-weight:700; font-size:.9rem; }
+.day-date { font-size:.75rem; color:var(--muted); }
+.day-badge { background:linear-gradient(135deg,var(--green),var(--lime)); color:var(--dark); font-size:.65rem; font-weight:700; padding:2px 10px; border-radius:20px; }
+
+.session-item { display:grid; grid-template-columns:80px 1fr auto; align-items:center; gap:10px; padding:11px 18px; border-top:1px solid var(--border); transition:background .15s; animation:fadeIn .3s ease; }
+@keyframes fadeIn { from{opacity:0;transform:translateY(-5px)} to{opacity:1;transform:translateY(0)} }
+.session-item:hover { background:rgba(74,222,128,.04); }
+.session-time { font-family:'Bebas Neue',sans-serif; font-size:1.05rem; color:var(--green); letter-spacing:1px; }
+.session-title { font-size:.875rem; font-weight:600; }
+.session-meta { font-size:.72rem; color:var(--muted); margin-top:2px; }
+.level-badge { font-size:.62rem; font-weight:700; padding:2px 8px; border-radius:6px; text-transform:uppercase; letter-spacing:1px; white-space:nowrap; }
+.level-beginner { background:rgba(74,222,128,.15); color:var(--green); border:1px solid rgba(74,222,128,.3); }
+.level-intermediate { background:rgba(255,165,0,.15); color:#ffa500; border:1px solid rgba(255,165,0,.3); }
+.level-advanced { background:rgba(255,107,53,.15); color:var(--accent); border:1px solid rgba(255,107,53,.3); }
+.session-actions { display:flex; gap:5px; margin-top:5px; }
+.btn-sm { background:none; border:1px solid var(--border); color:var(--muted); border-radius:6px; padding:3px 7px; cursor:pointer; font-size:.72rem; font-family:'Sarabun',sans-serif; transition:all .15s; }
+.btn-sm:hover { border-color:var(--green); color:var(--green); }
+.btn-sm.danger:hover { border-color:var(--red); color:var(--red); }
+.empty-day { padding:14px 18px; color:var(--muted); font-size:.82rem; text-align:center; border-top:1px solid var(--border); }
+
+/* Panel / Form */
+.panel { background:var(--panel); border:1px solid var(--border); border-radius:14px; overflow:hidden; }
+.panel-header { padding:12px 18px; background:var(--card); border-bottom:1px solid var(--border); font-weight:700; font-size:.8rem; letter-spacing:1px; text-transform:uppercase; color:var(--green); }
+.panel-body { padding:14px; }
+.form-group { margin-bottom:10px; }
+.form-label { font-size:.7rem; color:var(--muted); margin-bottom:5px; display:block; letter-spacing:1px; text-transform:uppercase; }
+.form-control { width:100%; background:var(--card); border:1px solid var(--border); color:var(--text); border-radius:8px; padding:8px 11px; font-size:.85rem; font-family:'Sarabun',sans-serif; transition:border-color .2s; appearance:none; }
+.form-control:focus { outline:none; border-color:var(--green); }
+.form-control option { background:var(--card); }
+.form-row { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+.btn-primary { width:100%; padding:11px; background:linear-gradient(135deg,var(--green),var(--lime)); color:var(--dark); border:none; border-radius:8px; font-size:.875rem; font-weight:700; cursor:pointer; font-family:'Sarabun',sans-serif; letter-spacing:1px; transition:opacity .2s,transform .1s; }
+.btn-primary:hover { opacity:.9; }
+.btn-primary:active { transform:scale(.98); }
+
+/* Coach list */
+.coach-item { display:flex; align-items:center; gap:10px; padding:9px 0; border-bottom:1px solid var(--border); }
+.coach-item:last-child { border-bottom:none; }
+.coach-avatar { width:36px; height:36px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:1rem; flex-shrink:0; background:rgba(74,222,128,.1); }
+.coach-name { font-size:.85rem; font-weight:600; }
+.coach-specialty { font-size:.72rem; color:var(--muted); }
+.coach-sessions { margin-left:auto; font-family:'Bebas Neue',sans-serif; font-size:1.1rem; color:var(--green); }
+
+/* Modal */
+.modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.75); backdrop-filter:blur(5px); z-index:300; align-items:center; justify-content:center; }
+.modal-overlay.show { display:flex; }
+.modal { background:var(--panel); border:1px solid var(--border); border-radius:16px; padding:24px; width:90%; max-width:400px; animation:popIn .25s ease; }
+.modal-title { font-family:'Bebas Neue',sans-serif; font-size:1.4rem; color:var(--green); letter-spacing:2px; margin-bottom:18px; }
+.modal-actions { display:flex; gap:10px; margin-top:18px; }
+.btn-cancel { flex:1; padding:10px; background:none; border:1px solid var(--border); color:var(--muted); border-radius:8px; cursor:pointer; font-family:'Sarabun',sans-serif; transition:all .15s; }
+.btn-cancel:hover { border-color:var(--text); color:var(--text); }
+
+/* Toast */
+.toast { position:fixed; bottom:24px; right:24px; z-index:400; background:var(--green); color:var(--dark); padding:12px 20px; border-radius:10px; font-weight:700; font-size:.85rem; box-shadow:0 8px 30px rgba(74,222,128,.4); display:none; }
+.toast.show { display:block; animation:toastIn .3s ease; }
+@keyframes toastIn { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
+
+@media(max-width:768px){
+  .main-grid { grid-template-columns:1fr; }
+  .stats-bar { grid-template-columns:repeat(2,1fr); }
+  h1 { font-size:1.5rem; }
+  .header-right { width:100%; }
+}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="loginScreen">
+  <div class="login-box" id="loginBox">
+    <div class="login-icon">🏓</div>
+    <div class="login-title">PICKLE COACH</div>
+    <div class="login-sub">ระบบตารางสอนพิคเคิลบอล</div>
+    <input type="password" id="pwInput" placeholder="รหัสผ่านแอดมิน" onkeydown="if(event.key==='Enter')doLogin()">
+    <div class="login-error" id="loginErr"></div>
+    <button class="btn-login" onclick="doLogin()">🔐 เข้าสู่ระบบแอดมิน</button>
+    <div class="public-link">หรือ <a onclick="enterPublic()">👁 ดูตารางแบบสาธารณะ (ไม่ต้องล็อกอิน)</a></div>
+  </div>
+  <div class="login-box" id="setupBox" style="display:none">
+    <div class="login-icon">🔑</div>
+    <div class="login-title">ตั้งรหัสผ่าน</div>
+    <div class="login-sub">ครั้งแรก — กรุณาตั้งรหัสผ่านแอดมิน</div>
+    <input type="password" id="setupPw1" placeholder="รหัสผ่านใหม่ (อย่างน้อย 6 ตัวอักษร)" onkeydown="if(event.key==='Enter')setupPw()">
+    <input type="password" id="setupPw2" placeholder="ยืนยันรหัสผ่าน" onkeydown="if(event.key==='Enter')setupPw()">
+    <div class="login-error" id="setupErr"></div>
+    <button class="btn-login" onclick="setupPw()">✅ ตั้งรหัสผ่านและเข้าสู่ระบบ</button>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <header>
+    <div class="logo">
+      <div class="paddle-icon">🏓</div>
+      <div><h1>PICKLE COACH</h1><div class="subtitle">ตารางสอนพิคเคิลบอล</div></div>
+    </div>
+    <div class="header-right">
+      <div class="mode-badge" id="modeBadge"></div>
+      <div class="week-nav">
+        <button class="week-btn" onclick="changeWeek(-1)">‹</button>
+        <div class="week-label" id="weekLabel">—</div>
+        <button class="week-btn" onclick="changeWeek(1)">›</button>
+      </div>
+      <button class="btn-logout" id="logoutBtn" onclick="doLogout()">ออกจากระบบ</button>
+    </div>
+  </header>
+
+  <div class="stats-bar">
+    <div class="stat-card"><div class="stat-num" id="statTotal">0</div><div class="stat-label">คลาสทั้งหมด</div></div>
+    <div class="stat-card"><div class="stat-num" id="statStudents">0</div><div class="stat-label">นักเรียนรวม</div></div>
+    <div class="stat-card"><div class="stat-num" id="statHours">0</div><div class="stat-label">ชั่วโมงสอน</div></div>
+    <div class="stat-card"><div class="stat-num">11</div><div class="stat-label">โค้ช</div></div>
+  </div>
+
+  <div class="main-grid">
+    <div class="calendar-section" id="calendarSection"></div>
+    <div class="admin-only" id="adminSidebar">
+      <div class="panel">
+        <div class="panel-header">➕ เพิ่มคลาสใหม่</div>
+        <div class="panel-body">
+          <div class="form-group"><label class="form-label">ชื่อคลาส</label><input class="form-control" id="fTitle" type="text" placeholder="เช่น เซิร์ฟและรับ"></div>
+          <div class="form-row">
+            <div class="form-group"><label class="form-label">วัน</label>
+              <select class="form-control" id="fDay">
+                <option value="0">จันทร์</option><option value="1">อังคาร</option><option value="2">พุธ</option>
+                <option value="3">พฤหัสบดี</option><option value="4">ศุกร์</option><option value="5">เสาร์</option><option value="6">อาทิตย์</option>
+              </select>
+            </div>
+            <div class="form-group"><label class="form-label">เวลา</label><input class="form-control" id="fTime" type="time" value="09:00"></div>
+          </div>
+          <div class="form-row">
+            <div class="form-group"><label class="form-label">ระดับ</label>
+              <select class="form-control" id="fLevel">
+                <option value="beginner">มือใหม่</option><option value="intermediate">กลาง</option><option value="advanced">สูง</option>
+              </select>
+            </div>
+            <div class="form-group"><label class="form-label">นักเรียน</label><input class="form-control" id="fStudents" type="number" value="4" min="1" max="30"></div>
+          </div>
+          <div class="form-group"><label class="form-label">โค้ช</label>
+            <select class="form-control" id="fCoach"><option>เอก</option><option>เอิ้น</option><option>แทน</option><option>พีท</option><option>แม๊ก</option><option>นิว</option><option>เฟรม</option><option>ภูมิ</option><option>โอ๊ต</option><option>เอ๋ย</option><option>โฟล์ค</option></select>
+          </div>
+          <div class="form-group"><label class="form-label">สนาม / สถานที่</label><input class="form-control" id="fCourt" type="text" placeholder="เช่น สนาม A"></div>
+          <button class="btn-primary" onclick="addSession()">+ เพิ่มคลาส</button>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-header">👤 โค้ชประจำ</div>
+        <div class="panel-body" id="coachList"></div>
+      </div>
+      <div class="panel">
+        <div class="panel-header">⚙️ ตั้งค่า</div>
+        <div class="panel-body">
+          <button class="btn-primary" style="margin-bottom:8px" onclick="openChangePw()">🔑 เปลี่ยนรหัสผ่าน</button>
+          <div class="form-group" style="margin-top:14px"><label class="form-label">Google Sheet ID</label>
+            <input class="form-control" id="gsSheetId" placeholder="1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgVE2upms" oninput="saveGsCreds()">
+          </div>
+          <div class="form-group"><label class="form-label">OAuth Client ID</label>
+            <input class="form-control" id="gsClientId" placeholder="xxxx.apps.googleusercontent.com" oninput="saveGsCreds()">
+          </div>
+          <div class="form-row" style="margin-bottom:8px">
+            <button class="btn-primary" onclick="syncToSheets()">☁️ Sync ไป Sheets</button>
+            <button class="btn-primary" style="background:linear-gradient(135deg,#60a5fa,#818cf8)" onclick="pullFromSheets()">📥 ดึงจาก Sheets</button>
+          </div>
+          <button class="btn-primary" style="background:linear-gradient(135deg,#f87171,#fb923c)" onclick="clearAllData()">🗑️ ล้างข้อมูลทั้งหมด</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Modal -->
+<div class="modal-overlay" id="editModal">
+  <div class="modal">
+    <div class="modal-title">✏️ แก้ไขคลาส</div>
+    <div class="form-group"><label class="form-label">ชื่อคลาส</label><input class="form-control" id="mTitle"></div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">เวลา</label><input class="form-control" id="mTime" type="time"></div>
+      <div class="form-group"><label class="form-label">นักเรียน</label><input class="form-control" id="mStudents" type="number" min="1" max="30"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">ระดับ</label>
+        <select class="form-control" id="mLevel"><option value="beginner">มือใหม่</option><option value="intermediate">กลาง</option><option value="advanced">สูง</option></select>
+      </div>
+      <div class="form-group"><label class="form-label">โค้ช</label>
+        <select class="form-control" id="mCoach"><option>เอก</option><option>เอิ้น</option><option>แทน</option><option>พีท</option><option>แม๊ก</option><option>นิว</option><option>เฟรม</option><option>ภูมิ</option><option>โอ๊ต</option><option>เอ๋ย</option><option>โฟล์ค</option></select>
+      </div>
+    </div>
+    <div class="form-group"><label class="form-label">สนาม / สถานที่</label><input class="form-control" id="mCourt"></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal('editModal')">ยกเลิก</button>
+      <button class="btn-primary" style="flex:1" onclick="saveEdit()">บันทึก</button>
+    </div>
+  </div>
+</div>
+
+<!-- Change PW Modal -->
+<div class="modal-overlay" id="pwModal">
+  <div class="modal">
+    <div class="modal-title">🔑 เปลี่ยนรหัสผ่าน</div>
+    <div class="form-group"><label class="form-label">รหัสผ่านปัจจุบัน</label><input class="form-control" id="pwCurrent" type="password"></div>
+    <div class="form-group"><label class="form-label">รหัสผ่านใหม่</label><input class="form-control" id="pwNew" type="password"></div>
+    <div class="form-group"><label class="form-label">ยืนยันรหัสผ่านใหม่</label><input class="form-control" id="pwConfirm" type="password"></div>
+    <div class="login-error" id="pwErr"></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal('pwModal')">ยกเลิก</button>
+      <button class="btn-primary" style="flex:1" onclick="savePw()">บันทึก</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const KEY_S = 'pb_sessions', KEY_P = 'pb_password';
+const KEY_GS = 'pb_gsheet_id', KEY_GC = 'pb_gclient_id';
+const DAY_NAMES = ['จันทร์','อังคาร','พุธ','พฤหัสบดี','ศุกร์','เสาร์','อาทิตย์'];
+const COACHES = [
+  {name:'เอก',  emoji:'🟢', specialty:'โค้ช'},
+  {name:'เอิ้น', emoji:'🔵', specialty:'โค้ช'},
+  {name:'แทน',  emoji:'🟡', specialty:'โค้ช'},
+  {name:'พีท',  emoji:'🟠', specialty:'โค้ช'},
+  {name:'แม๊ก', emoji:'🔴', specialty:'โค้ช'},
+  {name:'นิว',  emoji:'🟣', specialty:'โค้ช'},
+  {name:'เฟรม', emoji:'🟤', specialty:'โค้ช'},
+  {name:'ภูมิ', emoji:'⚪', specialty:'โค้ช'},
+  {name:'โอ๊ต', emoji:'🟢', specialty:'โค้ช'},
+  {name:'เอ๋ย', emoji:'🔵', specialty:'โค้ช'},
+  {name:'โฟล์ค',emoji:'🟡', specialty:'โค้ช'},
+];
+const DEF_SESSIONS = [
+  {id:1,dayIdx:0,time:'08:00',title:'พิคเคิลบอลเบื้องต้น',level:'beginner',students:6,coach:'เอก',court:'สนาม A'},
+  {id:2,dayIdx:0,time:'10:00',title:'เทคนิคการดริป',level:'intermediate',students:4,coach:'เอิ้น',court:'สนาม B'},
+  {id:3,dayIdx:1,time:'09:00',title:'คลาสสแมช',level:'advanced',students:3,coach:'เอิ้น',court:'สนาม A'},
+  {id:4,dayIdx:2,time:'08:30',title:'ฝึกเซิร์ฟ',level:'beginner',students:8,coach:'เอก',court:'สนาม C'},
+  {id:5,dayIdx:3,time:'17:00',title:'ดับเบิ้ลกลยุทธ์',level:'intermediate',students:4,coach:'แทน',court:'สนาม B'},
+  {id:6,dayIdx:5,time:'07:00',title:'เวิร์กช็อปเช้าวันเสาร์',level:'beginner',students:10,coach:'เอก',court:'สนาม A'},
+  {id:7,dayIdx:6,time:'09:00',title:'คลาสพิเศษ',level:'advanced',students:4,coach:'แทน',court:'สนาม B'},
+];
+
+let isAdmin=false, weekOffset=0, editingId=null;
+let sessions = (() => { try { return JSON.parse(localStorage.getItem(KEY_S))||DEF_SESSIONS; } catch{return DEF_SESSIONS;} })();
+let nextId = Math.max(...sessions.map(s=>s.id),0)+1;
+const saveSessions = () => localStorage.setItem(KEY_S, JSON.stringify(sessions));
+const isFirstRun = () => !localStorage.getItem(KEY_P);
+
+async function hashPw(str) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+
+function enterAdmin() {
+  isAdmin=true;
+  document.getElementById('loginScreen').style.display='none';
+  document.getElementById('app').style.display='block';
+  document.body.classList.add('admin-mode');
+  document.getElementById('modeBadge').className='mode-badge mode-admin';
+  document.getElementById('modeBadge').textContent='🔐 แอดมิน';
+  render();
+}
+
+async function doLogin(){
+  const hash=await hashPw(document.getElementById('pwInput').value);
+  if(hash===localStorage.getItem(KEY_P)){
+    enterAdmin();
+  } else {
+    document.getElementById('loginErr').textContent='รหัสผ่านไม่ถูกต้อง';
+    document.getElementById('pwInput').value='';
+    setTimeout(()=>document.getElementById('loginErr').textContent='',2500);
+  }
+}
+
+async function setupPw(){
+  const nw=document.getElementById('setupPw1').value;
+  const cf=document.getElementById('setupPw2').value;
+  const err=document.getElementById('setupErr');
+  if(nw.length<6){err.textContent='ต้องมีอย่างน้อย 6 ตัวอักษร';return;}
+  if(nw!==cf){err.textContent='รหัสผ่านไม่ตรงกัน';return;}
+  localStorage.setItem(KEY_P, await hashPw(nw));
+  enterAdmin();
+}
+
+function enterPublic(){
+  isAdmin=false;
+  document.getElementById('loginScreen').style.display='none';
+  document.getElementById('app').style.display='block';
+  document.body.classList.remove('admin-mode');
+  document.getElementById('modeBadge').className='mode-badge mode-public';
+  document.getElementById('modeBadge').textContent='👁 ดูตาราง';
+  document.getElementById('logoutBtn').textContent='← กลับ';
+  render();
+}
+
+function doLogout(){
+  isAdmin=false;
+  document.getElementById('app').style.display='none';
+  document.getElementById('loginScreen').style.display='flex';
+  document.getElementById('pwInput').value='';
+  document.body.classList.remove('admin-mode');
+  document.getElementById('logoutBtn').textContent='ออกจากระบบ';
+  weekOffset=0;
+}
+
+function getWeekStart(off){
+  const now=new Date(), day=now.getDay();
+  const mon=new Date(now);
+  mon.setDate(now.getDate()-(day===0?6:day-1)+off*7);
+  mon.setHours(0,0,0,0); return mon;
+}
+const fmtDate = d => d.toLocaleDateString('th-TH',{day:'numeric',month:'short'});
+const changeWeek = d => { weekOffset+=d; render(); };
+const lvlLabel = l => ({beginner:'มือใหม่',intermediate:'กลาง',advanced:'สูง'}[l]||l);
+function showToast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2400);
+}
+
+function render(){
+  const ws=getWeekStart(weekOffset), we=new Date(ws);
+  we.setDate(ws.getDate()+6);
+  document.getElementById('weekLabel').textContent=`${fmtDate(ws)} – ${fmtDate(we)}`;
+  document.getElementById('statTotal').textContent=sessions.length;
+  document.getElementById('statStudents').textContent=sessions.reduce((a,s)=>a+s.students,0);
+  document.getElementById('statHours').textContent=sessions.length;
+
+  const cal=document.getElementById('calendarSection');
+  cal.innerHTML='';
+  DAY_NAMES.forEach((name,idx)=>{
+    const dd=new Date(ws); dd.setDate(ws.getDate()+idx);
+    const ds=sessions.filter(s=>s.dayIdx===idx).sort((a,b)=>a.time.localeCompare(b.time));
+    const card=document.createElement('div');
+    card.className='day-card'+(ds.length?' has-sessions':'');
+    card.innerHTML=`
+      <div class="day-header">
+        <div><div class="day-name">${name}</div><div class="day-date">${fmtDate(dd)}</div></div>
+        ${ds.length?`<span class="day-badge">${ds.length} คลาส</span>`:''}
+      </div>
+      <div>
+        ${ds.length?ds.map(s=>`
+        <div class="session-item">
+          <div class="session-time">${s.time}</div>
+          <div>
+            <div class="session-title">${s.title}</div>
+            <div class="session-meta">👤 ${s.coach} &nbsp;·&nbsp; 📍 ${s.court} &nbsp;·&nbsp; 👥 ${s.students} คน</div>
+          </div>
+          <div style="text-align:right">
+            <span class="level-badge level-${s.level}">${lvlLabel(s.level)}</span>
+            ${isAdmin?`<div class="session-actions">
+              <button class="btn-sm" onclick="openEdit(${s.id})">✏️</button>
+              <button class="btn-sm danger" onclick="delSession(${s.id})">🗑️</button>
+            </div>`:''}
+          </div>
+        </div>`).join(''):'<div class="empty-day">— ไม่มีคลาสในวันนี้ —</div>'}
+      </div>`;
+    cal.appendChild(card);
+  });
+
+  if(isAdmin){
+    const cl=document.getElementById('coachList');
+    cl.innerHTML=COACHES.map(c=>`
+      <div class="coach-item">
+        <div class="coach-avatar">${c.emoji}</div>
+        <div><div class="coach-name">${c.name}</div><div class="coach-specialty">${c.specialty}</div></div>
+        <div class="coach-sessions">${sessions.filter(s=>s.coach===c.name).length}</div>
+      </div>`).join('');
+    loadGsCreds();
+  }
+}
+
+function addSession(){
+  const title=document.getElementById('fTitle').value.trim();
+  if(!title){showToast('⚠️ กรุณาใส่ชื่อคลาส');return;}
+  sessions.push({id:nextId++,dayIdx:parseInt(document.getElementById('fDay').value),
+    time:document.getElementById('fTime').value,title,
+    level:document.getElementById('fLevel').value,
+    students:parseInt(document.getElementById('fStudents').value)||1,
+    coach:document.getElementById('fCoach').value,
+    court:document.getElementById('fCourt').value||'สนาม A'});
+  saveSessions(); document.getElementById('fTitle').value=''; document.getElementById('fCourt').value='';
+  showToast('✅ เพิ่มคลาสแล้ว'); render();
+}
+
+function delSession(id){
+  if(!confirm('ลบคลาสนี้?'))return;
+  sessions=sessions.filter(s=>s.id!==id); saveSessions(); showToast('🗑️ ลบแล้ว'); render();
+}
+
+function openEdit(id){
+  const s=sessions.find(x=>x.id===id); if(!s)return; editingId=id;
+  document.getElementById('mTitle').value=s.title;
+  document.getElementById('mTime').value=s.time;
+  document.getElementById('mStudents').value=s.students;
+  document.getElementById('mLevel').value=s.level;
+  document.getElementById('mCoach').value=s.coach;
+  document.getElementById('mCourt').value=s.court;
+  document.getElementById('editModal').classList.add('show');
+}
+
+function saveEdit(){
+  const s=sessions.find(x=>x.id===editingId); if(!s)return;
+  s.title=document.getElementById('mTitle').value.trim()||s.title;
+  s.time=document.getElementById('mTime').value;
+  s.students=parseInt(document.getElementById('mStudents').value)||1;
+  s.level=document.getElementById('mLevel').value;
+  s.coach=document.getElementById('mCoach').value;
+  s.court=document.getElementById('mCourt').value;
+  saveSessions(); closeModal('editModal'); showToast('✅ บันทึกแล้ว'); render();
+}
+
+function closeModal(id){ document.getElementById(id).classList.remove('show'); editingId=null; }
+
+function openChangePw(){ document.getElementById('pwModal').classList.add('show'); }
+
+async function savePw(){
+  const cur=document.getElementById('pwCurrent').value;
+  const nw=document.getElementById('pwNew').value;
+  const cf=document.getElementById('pwConfirm').value;
+  const err=document.getElementById('pwErr');
+  const curHash=await hashPw(cur);
+  if(curHash!==localStorage.getItem(KEY_P)){err.textContent='รหัสผ่านปัจจุบันไม่ถูกต้อง';return;}
+  if(nw.length<6){err.textContent='ต้องมีอย่างน้อย 6 ตัวอักษร';return;}
+  if(nw!==cf){err.textContent='รหัสผ่านใหม่ไม่ตรงกัน';return;}
+  localStorage.setItem(KEY_P, await hashPw(nw));
+  ['pwCurrent','pwNew','pwConfirm'].forEach(i=>document.getElementById(i).value='');
+  err.textContent=''; closeModal('pwModal'); showToast('🔑 เปลี่ยนรหัสผ่านแล้ว');
+}
+
+function clearAllData(){
+  if(!confirm('ล้างข้อมูลทั้งหมด?\nไม่สามารถกู้คืนได้'))return;
+  sessions=[...DEF_SESSIONS.map(s=>({...s}))];
+  nextId=Math.max(...sessions.map(s=>s.id))+1;
+  saveSessions(); showToast('🗑️ ล้างข้อมูลแล้ว'); render();
+}
+
+/* ── Google Sheets ── */
+function loadGsCreds(){
+  document.getElementById('gsSheetId').value=localStorage.getItem(KEY_GS)||'';
+  document.getElementById('gsClientId').value=localStorage.getItem(KEY_GC)||'';
+}
+function saveGsCreds(){
+  localStorage.setItem(KEY_GS,document.getElementById('gsSheetId').value.trim());
+  localStorage.setItem(KEY_GC,document.getElementById('gsClientId').value.trim());
+}
+
+function getGToken(){
+  return new Promise((resolve,reject)=>{
+    const clientId=localStorage.getItem(KEY_GC);
+    if(!clientId){reject(new Error('กรุณาใส่ OAuth Client ID ก่อน'));return;}
+    const client=google.accounts.oauth2.initTokenClient({
+      client_id:clientId,
+      scope:'https://www.googleapis.com/auth/spreadsheets',
+      callback:r=>r.error?reject(new Error(r.error)):resolve(r.access_token),
+    });
+    client.requestAccessToken({prompt:''});
+  });
+}
+
+const GS_RANGE='Sheet1!A1:H';
+const GS_HEADERS=['id','dayIdx','time','title','level','students','coach','court'];
+
+async function syncToSheets(){
+  const sid=localStorage.getItem(KEY_GS);
+  if(!sid){showToast('⚠️ กรุณาใส่ Sheet ID ก่อน');return;}
+  try{
+    showToast('⏳ กำลัง sync...');
+    const token=await getGToken();
+    const rows=[GS_HEADERS,...sessions.map(s=>GS_HEADERS.map(k=>String(s[k])))];
+    await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sid}/values/${encodeURIComponent(GS_RANGE)}:clear`,
+      {method:'POST',headers:{Authorization:`Bearer ${token}`}});
+    const res=await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sid}/values/${encodeURIComponent(GS_RANGE)}?valueInputOption=RAW`,
+      {method:'PUT',headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json'},
+       body:JSON.stringify({values:rows})});
+    if(!res.ok)throw new Error(`Sheets API error ${res.status}`);
+    showToast('✅ Sync ไป Sheets แล้ว');
+  }catch(e){showToast('❌ '+e.message);}
+}
+
+async function pullFromSheets(){
+  const sid=localStorage.getItem(KEY_GS);
+  if(!sid){showToast('⚠️ กรุณาใส่ Sheet ID ก่อน');return;}
+  try{
+    showToast('⏳ กำลังดึงข้อมูล...');
+    const token=await getGToken();
+    const res=await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sid}/values/${encodeURIComponent(GS_RANGE)}`,
+      {headers:{Authorization:`Bearer ${token}`}});
+    if(!res.ok)throw new Error(`Sheets API error ${res.status}`);
+    const data=await res.json();
+    if(!data.values||data.values.length<2){showToast('⚠️ ไม่มีข้อมูลใน Sheet');return;}
+    const [header,...rows]=data.values;
+    sessions=rows.map(row=>{
+      const o={};
+      header.forEach((k,i)=>o[k]=row[i]||'');
+      return{id:parseInt(o.id)||0,dayIdx:parseInt(o.dayIdx)||0,time:o.time||'09:00',
+             title:o.title||'',level:o.level||'beginner',students:parseInt(o.students)||1,
+             coach:o.coach||'',court:o.court||''};
+    });
+    nextId=Math.max(...sessions.map(s=>s.id),0)+1;
+    saveSessions(); render(); showToast('✅ ดึงข้อมูลจาก Sheets แล้ว');
+  }catch(e){showToast('❌ '+e.message);}
+}
+
+/* ── Init ── */
+['editModal','pwModal'].forEach(id=>{
+  document.getElementById(id).addEventListener('click',function(e){if(e.target===this)closeModal(id);});
+});
+document.getElementById('pwInput').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
+
+if(isFirstRun()){
+  document.getElementById('loginBox').style.display='none';
+  document.getElementById('setupBox').style.display='block';
+}
+</script>
+</body>
+</html>
