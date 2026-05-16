@@ -44,13 +44,7 @@ body::before {
 @keyframes popIn { from{opacity:0;transform:scale(.88)} to{opacity:1;transform:scale(1)} }
 .login-icon { font-size:3rem; margin-bottom:12px; filter:drop-shadow(0 0 16px rgba(74,222,128,.6)); }
 .login-title { font-family:'Bebas Neue',sans-serif; font-size:2rem; letter-spacing:3px; color:var(--green); }
-.login-sub { font-size:.8rem; color:var(--muted); margin-bottom:28px; letter-spacing:1px; }
-.login-box input {
-  width:100%; background:var(--card); border:1px solid var(--border);
-  color:var(--text); border-radius:10px; padding:12px 16px;
-  font-size:1rem; font-family:'Sarabun',sans-serif; margin-bottom:12px; transition:border-color .2s;
-}
-.login-box input:focus { outline:none; border-color:var(--green); }
+.login-sub { font-size:.85rem; color:var(--muted); margin-bottom:28px; letter-spacing:1px; }
 .login-error { color:var(--red); font-size:.8rem; margin-bottom:10px; min-height:18px; }
 .btn-login {
   width:100%; padding:13px;
@@ -61,9 +55,22 @@ body::before {
 }
 .btn-login:hover { opacity:.9; }
 .btn-login:active { transform:scale(.97); }
+.btn-login:disabled { opacity:.5; cursor:not-allowed; }
+.btn-login-outline {
+  width:100%; padding:12px; margin-top:10px;
+  background:none; border:1px solid var(--border); color:var(--muted);
+  border-radius:10px; font-size:.9rem; font-weight:600; cursor:pointer;
+  font-family:'Sarabun',sans-serif; letter-spacing:.5px; transition:all .2s;
+}
+.btn-login-outline:hover { border-color:var(--green); color:var(--green); }
 .public-link { margin-top:18px; font-size:.8rem; color:var(--muted); }
 .public-link a { color:var(--green); cursor:pointer; text-decoration:none; font-weight:600; }
 .public-link a:hover { text-decoration:underline; }
+.sync-spinner {
+  display:inline-block; font-size:2.2rem; margin-bottom:12px;
+  animation:spin 1.2s linear infinite;
+}
+@keyframes spin { to { transform:rotate(360deg); } }
 
 /* APP */
 #app { position:relative; z-index:1; max-width:1100px; margin:0 auto; padding:24px 16px; display:none; }
@@ -190,21 +197,24 @@ body.admin-mode .admin-only { display:flex; flex-direction:column; gap:16px; }
 
 <!-- LOGIN -->
 <div id="loginScreen">
+  <!-- Main login options -->
   <div class="login-box" id="loginBox">
     <div class="login-icon">🏓</div>
     <div class="login-title">002 ACADEMY</div>
     <div class="login-sub">ระบบตารางสอน</div>
-    <input type="password" id="pwInput" placeholder="รหัสผ่านแอดมิน" onkeydown="if(event.key==='Enter')doLogin()">
     <div class="login-error" id="loginErr"></div>
-    <button class="btn-login" onclick="doLogin()">🔐 เข้าสู่ระบบแอดมิน</button>
-    <div class="public-link">หรือ <a onclick="enterPublic()">👁 ดูตารางแบบสาธารณะ (ไม่ต้องล็อกอิน)</a></div>
+    <button class="btn-login" id="googleBtn" onclick="startGoogleAuth()">
+      🔑 เข้าสู่ระบบด้วย Google
+    </button>
+    <div class="public-link">หรือ <a onclick="enterPublic()">👁 ดูตาราง (ไม่ต้องล็อกอิน)</a></div>
   </div>
 
+  <!-- Loading / error state -->
   <div class="login-box" id="syncBox" style="display:none">
-    <div class="login-icon" id="syncIcon">🔗</div>
+    <div class="sync-spinner" id="syncIcon">⏳</div>
     <div class="login-title">002 ACADEMY</div>
-    <div class="login-sub" id="syncMsg">กรุณาเชื่อมต่อ Google เพื่อโหลดข้อมูล</div>
-    <button class="btn-login" id="syncBtn" onclick="connectGoogle()" style="display:none">🔗 เชื่อมต่อ Google Sheets</button>
+    <div class="login-sub" id="syncMsg">กำลังโหลด...</div>
+    <button class="btn-login" id="syncBtn" onclick="handleSyncBtnClick()" style="display:none;margin-top:8px">← กลับ</button>
   </div>
 </div>
 
@@ -418,7 +428,6 @@ body.admin-mode .admin-only { display:flex; flex-direction:column; gap:16px; }
   </div>
 </div>
 
-
 <!-- Duplicate Modal -->
 <div class="modal-overlay" id="dupModal">
   <div class="modal">
@@ -443,7 +452,6 @@ body.admin-mode .admin-only { display:flex; flex-direction:column; gap:16px; }
 
 <script>
 const KEY_CV='pb_custom_venues';
-const FIXED_PW_HASH='ac9689e2272427085e35b9d3e3e8bed88cb3434828b43b86fc0596cad4c6e270';
 const SHEET_ID='1fCLRpZfE6eaiuAa404GA5WUYXmihVcbVKsjUIIZgSE8';
 const CLIENT_ID='886397941210-1iemf0bqi86nl9lpelkae9d4a8c52aoq.apps.googleusercontent.com';
 const DAY_NAMES=['จันทร์','อังคาร','พุธ','พฤหัสบดี','ศุกร์','เสาร์','อาทิตย์'];
@@ -492,137 +500,153 @@ function buildVenueSelect(id,current){
     +`<option value="Other"${current==='Other'?' selected':''}>อื่นๆ (ระบุเอง)</option>`;
 }
 
-/* DEF_SESSIONS with real dates */
-const _ws0=getWeekStart(0);
-const _d=idx=>{const d=new Date(_ws0);d.setDate(_ws0.getDate()+idx);return toDateStr(d);};
-const DEF_SESSIONS=[
-  {id:1,date:_d(0),time:'08:00',duration:60,title:'พิคเคิลบอลเบื้องต้น',level:'beginner',students:6,coach:'เอก',venue:'Beat Discovery',venueOther:'',court:1},
-  {id:2,date:_d(0),time:'10:00',duration:60,title:'เทคนิคการดริป',level:'intermediate',students:4,coach:'เอิ้น',venue:'Beat Discovery',venueOther:'',court:2},
-  {id:3,date:_d(1),time:'09:00',duration:120,title:'คลาสสแมช',level:'advanced',students:3,coach:'เอิ้น',venue:'The Racquet Realm',venueOther:'',court:1},
-  {id:4,date:_d(2),time:'08:30',duration:60,title:'ฝึกเซิร์ฟ',level:'beginner',students:8,coach:'เอก',venue:'Club 46',venueOther:'',court:1},
-  {id:5,date:_d(3),time:'17:00',duration:60,title:'ดับเบิ้ลกลยุทธ์',level:'intermediate',students:4,coach:'แทน',venue:'The Racquet Realm',venueOther:'',court:3},
-  {id:6,date:_d(5),time:'07:00',duration:120,title:'เวิร์กช็อปเช้าวันเสาร์',level:'beginner',students:10,coach:'เอก',venue:'Beat Discovery',venueOther:'',court:1},
-  {id:7,date:_d(6),time:'09:00',duration:120,title:'คลาสพิเศษ',level:'advanced',students:4,coach:'แทน',venue:'Club 46',venueOther:'',court:2},
-];
-
 let isAdmin=false, weekOffset=0, editingId=null, selectedCoach='', selectedVenue='';
 let duplicatingId=null, duplicateDates=[];
 let gToken=null, gTokenExpiry=0;
+let sessions=[], nextId=1;
+let _gClient=null, _syncBtnAction=null;
 
-/* Load + migrate old sessions */
-let sessions=[];
-let nextId=1;
+/* ── Google Auth ── */
 
-const saveSessions=()=>{
-  pushAndPull();
-};
-async function hashPw(str){
-  const buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(str));
-  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
-}
-
-let _gClient=null, _gFallbackTimer=null;
-
-async function enterAdmin(){
-  isAdmin=true;
-  document.body.classList.add('admin-mode');
-  document.getElementById('loginBox').style.display='none';
-  document.getElementById('syncBox').style.display='block';
-  document.getElementById('syncIcon').textContent='⏳';
-  document.getElementById('syncMsg').textContent='กำลังเชื่อมต่อ Google...';
-  document.getElementById('syncBtn').style.display='none';
-
-  if(gToken&&Date.now()<gTokenExpiry-60000){afterGoogleAuth();return;}
-
-  if(!_gClient) _gClient=google.accounts.oauth2.initTokenClient({
+function ensureGClient(){
+  if(_gClient) return;
+  if(typeof google==='undefined'||!google.accounts){
+    throw new Error('Google API ยังโหลดไม่เสร็จ กรุณารีเฟรชหน้าใหม่');
+  }
+  _gClient=google.accounts.oauth2.initTokenClient({
     client_id:CLIENT_ID,
     scope:'https://www.googleapis.com/auth/spreadsheets',
-    callback:r=>{
-      clearTimeout(_gFallbackTimer);
-      if(r.error){showSyncError(r.error_description||r.error);return;}
-      gToken=r.access_token;
-      gTokenExpiry=Date.now()+(r.expires_in||3600)*1000;
-      afterGoogleAuth();
-    },
+    callback:handleTokenResponse,
   });
-  _gClient.requestAccessToken({prompt:''});
-
-  // If popup is blocked (mobile), show manual button after 3s
-  _gFallbackTimer=setTimeout(()=>{
-    document.getElementById('syncIcon').textContent='🔗';
-    document.getElementById('syncMsg').textContent='กรุณาเชื่อมต่อ Google';
-    document.getElementById('syncBtn').style.display='';
-    document.getElementById('syncBtn').textContent='🔗 เชื่อมต่อ Google Sheets';
-  },3000);
 }
 
-function connectGoogle(){
-  if(gToken&&Date.now()<gTokenExpiry-60000){afterGoogleAuth();return;}
-  document.getElementById('syncBtn').style.display='none';
-  document.getElementById('syncMsg').textContent='กำลังเชื่อมต่อ Google...';
-  document.getElementById('syncIcon').textContent='⏳';
+/* Called directly from onclick — NO async/await before requestAccessToken so iOS Safari allows the popup */
+function startGoogleAuth(){
+  const btn=document.getElementById('googleBtn');
+  btn.disabled=true;
+  try{
+    ensureGClient();
+  }catch(e){
+    btn.disabled=false;
+    document.getElementById('loginErr').textContent=e.message;
+    return;
+  }
+  showLoading('กำลังเชื่อมต่อ Google...');
   _gClient.requestAccessToken({prompt:''});
+}
+
+function handleTokenResponse(r){
+  if(r.error){
+    backToLogin('เข้าสู่ระบบไม่สำเร็จ: '+(r.error_description||r.error));
+    return;
+  }
+  gToken=r.access_token;
+  gTokenExpiry=Date.now()+(r.expires_in||3600)*1000;
+  afterGoogleAuth();
 }
 
 async function afterGoogleAuth(){
-  document.getElementById('syncBtn').style.display='none';
-  document.getElementById('syncMsg').textContent='กำลัง sync ข้อมูลจาก Google Sheets...';
-  document.getElementById('syncIcon').textContent='⏳';
+  showLoading('กำลังโหลดข้อมูลจาก Google Sheets...');
   try{
     await doPullFromSheets(gToken);
-    document.getElementById('loginScreen').style.display='none';
-    document.getElementById('app').style.display='block';
+  }catch(e){
+    showSyncError('โหลดข้อมูลไม่สำเร็จ กรุณาลองใหม่',startGoogleAuth);
+    return;
+  }
+  showLoading('กำลังตรวจสอบสิทธิ์การแก้ไข...');
+  const canWrite=await checkWriteAccess(gToken);
+  launchApp(canWrite);
+  if(!canWrite){
+    showToast('⚠️ คุณไม่มีสิทธิ์แก้ไข — แสดงแบบอ่านอย่างเดียว');
+  }
+}
+
+/* Tests write access by writing the existing header value back to A1 (safe no-op). */
+async function checkWriteAccess(token){
+  try{
+    const res=await fetch(
+      `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${encodeURIComponent('Sheet1!A1')}?valueInputOption=RAW`,
+      {method:'PUT',headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json'},
+       body:JSON.stringify({values:[['id']]})}
+    );
+    return res.ok;
+  }catch{return false;}
+}
+
+function launchApp(adminMode){
+  isAdmin=adminMode;
+  if(adminMode){
+    document.body.classList.add('admin-mode');
     document.getElementById('modeBadge').className='mode-badge mode-admin';
     document.getElementById('modeBadge').textContent='🔐 แอดมิน';
-    render();
-  }catch(e){
-    showSyncError('ไม่สามารถโหลดข้อมูลจาก Sheets ได้ กรุณาลองใหม่');
-  }
-}
-
-function showSyncError(msg){
-  document.getElementById('syncIcon').textContent='❌';
-  document.getElementById('syncMsg').textContent=msg||'ไม่สามารถ sync ได้';
-  document.getElementById('syncBtn').style.display='';
-  document.getElementById('syncBtn').textContent='🔄 ลองใหม่';
-}
-
-async function doLogin(){
-  const hash=await hashPw(document.getElementById('pwInput').value);
-  if(hash===FIXED_PW_HASH){
-    enterAdmin();
+    document.getElementById('logoutBtn').textContent='ออกจากระบบ';
   }else{
-    document.getElementById('loginErr').textContent='รหัสผ่านไม่ถูกต้อง';
-    document.getElementById('pwInput').value='';
-    setTimeout(()=>document.getElementById('loginErr').textContent='',2500);
+    document.body.classList.remove('admin-mode');
+    document.getElementById('modeBadge').className='mode-badge mode-public';
+    document.getElementById('modeBadge').textContent='👁 ดูตาราง';
+    document.getElementById('logoutBtn').textContent='← กลับ';
+  }
+  document.getElementById('loginScreen').style.display='none';
+  document.getElementById('app').style.display='block';
+  render();
+}
+
+/* ── Loading / error UI ── */
+
+function showLoading(msg){
+  document.getElementById('loginBox').style.display='none';
+  document.getElementById('syncBox').style.display='block';
+  document.getElementById('syncIcon').textContent='⏳';
+  document.getElementById('syncIcon').style.animation='spin 1.2s linear infinite';
+  document.getElementById('syncMsg').textContent=msg||'กำลังโหลด...';
+  document.getElementById('syncBtn').style.display='none';
+}
+
+function showSyncError(msg,retryFn){
+  document.getElementById('loginBox').style.display='none';
+  document.getElementById('syncBox').style.display='block';
+  document.getElementById('syncIcon').textContent='❌';
+  document.getElementById('syncIcon').style.animation='none';
+  document.getElementById('syncMsg').textContent=msg||'เกิดข้อผิดพลาด';
+  const btn=document.getElementById('syncBtn');
+  btn.style.display='';
+  btn.textContent=retryFn?'🔄 ลองใหม่':'← กลับ';
+  _syncBtnAction=retryFn||null;
+}
+
+function handleSyncBtnClick(){
+  if(_syncBtnAction){
+    _syncBtnAction();
+  }else{
+    backToLogin();
   }
 }
 
+function backToLogin(errMsg){
+  _syncBtnAction=null;
+  document.getElementById('syncBox').style.display='none';
+  document.getElementById('loginBox').style.display='block';
+  document.getElementById('googleBtn').disabled=false;
+  if(errMsg){
+    document.getElementById('loginErr').textContent=errMsg;
+    setTimeout(()=>document.getElementById('loginErr').textContent='',3000);
+  }else{
+    document.getElementById('loginErr').textContent='';
+  }
+}
+
+/* ── Public view (no login) ── */
 
 async function enterPublic(){
   isAdmin=false;
   document.body.classList.remove('admin-mode');
-  document.getElementById('loginBox').style.display='none';
-  document.getElementById('syncBox').style.display='';
-  document.getElementById('syncIcon').textContent='⏳';
-  document.getElementById('syncMsg').textContent='กำลังโหลดตาราง...';
-  document.getElementById('syncBtn').style.display='none';
+  showLoading('กำลังโหลดตาราง...');
   try{
     await loadPublicData();
+    launchApp(false);
   }catch(e){
-    document.getElementById('syncIcon').textContent='❌';
-    document.getElementById('syncMsg').textContent='โหลดข้อมูลไม่สำเร็จ กรุณาลองใหม่';
-    document.getElementById('syncBtn').style.display='';
-    document.getElementById('syncBtn').textContent='🔄 ลองใหม่';
-    document.getElementById('syncBtn').onclick=enterPublic;
-    return;
+    showSyncError('โหลดข้อมูลไม่สำเร็จ กรุณาลองใหม่',enterPublic);
   }
-  document.getElementById('loginScreen').style.display='none';
-  document.getElementById('app').style.display='block';
-  document.getElementById('modeBadge').className='mode-badge mode-public';
-  document.getElementById('modeBadge').textContent='👁 ดูตาราง';
-  document.getElementById('logoutBtn').textContent='← กลับ';
-  render();
 }
 
 function parseCSV(text){
@@ -662,22 +686,28 @@ async function loadPublicData(){
   nextId=Math.max(...sessions.map(s=>s.id),0)+1;
 }
 
+/* ── Logout ── */
+
 function doLogout(){
-  clearTimeout(_gFallbackTimer);
   isAdmin=false; gToken=null; gTokenExpiry=0;
   sessions=[]; nextId=1;
   selectedCoach=''; selectedVenue=''; weekOffset=0;
+  _gClient=null; _syncBtnAction=null;
   document.getElementById('app').style.display='none';
   document.getElementById('loginScreen').style.display='flex';
   document.getElementById('loginBox').style.display='block';
   document.getElementById('syncBox').style.display='none';
-  document.getElementById('pwInput').value='';
   document.getElementById('loginErr').textContent='';
+  document.getElementById('googleBtn').disabled=false;
   document.body.classList.remove('admin-mode');
   document.getElementById('logoutBtn').textContent='ออกจากระบบ';
   document.getElementById('coachFilter').value='';
   document.getElementById('venueFilter').value='';
 }
+
+/* ── App logic ── */
+
+const saveSessions=()=>pushAndPull();
 
 const fmtDate=d=>`${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
 const lvlLabel=l=>({beginner:'มือใหม่',intermediate:'กลาง',advanced:'สูง'}[l]||l);
@@ -689,6 +719,8 @@ async function changeWeek(d){
   render();
   if(gToken&&Date.now()<gTokenExpiry-60000){
     try{if(await doPullFromSheets(gToken))render();}catch(e){}
+  }else if(!gToken){
+    try{await loadPublicData();render();}catch(e){}
   }
 }
 function applyCoachFilter(){
@@ -751,7 +783,6 @@ function render(){
 
   const weekSessions=sessions.filter(s=>s.date>=wsStr&&s.date<=weStr);
 
-  /* Rebuild venue filter options from all sessions */
   const venueEl=document.getElementById('venueFilter');
   const prevVenue=venueEl.value;
   const allVenues=[...new Set(sessions.map(s=>getVenueName(s)).filter(Boolean))].sort();
@@ -888,18 +919,12 @@ function closeModal(id){
 
 function clearAllData(){
   if(!confirm('ล้างข้อมูลทั้งหมด?\nไม่สามารถกู้คืนได้'))return;
-  sessions=[];
-  nextId=1;
+  sessions=[]; nextId=1;
   saveSessions(); showToast('🗑️ ล้างข้อมูลแล้ว'); render();
 }
 
-/* ── Google Sheets ── */
-function getGToken(){
-  if(gToken&&Date.now()<gTokenExpiry-60000) return Promise.resolve(gToken);
-  return Promise.reject(new Error('No auth token'));
-}
+/* ── Google Sheets API ── */
 
-/* Columns: id | date | time | duration | title | level | students | coach | venue | court */
 const GS_RANGE='Sheet1!A1:K';
 const GS_HEADERS=['id','date','time','finishTime','duration(hrs)','title','level','students','coach','venue','court'];
 
@@ -921,15 +946,15 @@ async function doSyncToSheets(token){
   const res=await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${encodeURIComponent(GS_RANGE)}?valueInputOption=RAW`,
     {method:'PUT',headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json'},
      body:JSON.stringify({values:rows})});
-  if(!res.ok)throw new Error(`Sheets API error ${res.status}`);
+  if(!res.ok) throw new Error(`Sheets API error ${res.status}`);
 }
 
 async function doPullFromSheets(token){
   const res=await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${encodeURIComponent(GS_RANGE)}`,
     {headers:{Authorization:`Bearer ${token}`}});
-  if(!res.ok)throw new Error(`Sheets API error ${res.status}`);
+  if(!res.ok) throw new Error(`Sheets API error ${res.status}`);
   const data=await res.json();
-  if(!data.values||data.values.length<2)return false;
+  if(!data.values||data.values.length<2) return false;
   const[header,...rows]=data.values;
   sessions=rows.map(row=>{
     const o={}; header.forEach((k,i)=>o[k]=row[i]||'');
@@ -953,44 +978,20 @@ async function doPullFromSheets(token){
   return true;
 }
 
-async function autoSync(){
-  if(!gToken||Date.now()>=gTokenExpiry-60000)return;
-  try{ if(await doPullFromSheets(gToken))render(); }catch(e){}
-}
-
 async function pushAndPull(){
-  if(!gToken||Date.now()>=gTokenExpiry-60000)return;
+  if(!gToken||Date.now()>=gTokenExpiry-60000) return;
   try{
     await doSyncToSheets(gToken);
-    if(await doPullFromSheets(gToken))render();
-  }catch(e){showToast('⚠️ Sync ไม่สำเร็จ');}
-}
-
-async function syncToSheets(){
-  try{
-    showToast('⏳ กำลัง sync...');
-    const token=await getGToken();
-    await doSyncToSheets(token);
-    if(await doPullFromSheets(token))render();
-    showToast('✅ Sync ไป Sheets แล้ว');
-  }catch(e){showToast('❌ '+e.message);}
-}
-
-async function pullFromSheets(){
-  try{
-    showToast('⏳ กำลัง sync...');
-    const token=await getGToken();
-    await doSyncToSheets(token);
-    if(await doPullFromSheets(token))render();
-    showToast('✅ Sync เสร็จแล้ว');
-  }catch(e){showToast('❌ '+e.message);}
+    if(await doPullFromSheets(gToken)) render();
+  }catch(e){
+    showToast('⚠️ บันทึกไม่สำเร็จ — ไม่มีสิทธิ์แก้ไข');
+  }
 }
 
 /* ── Init ── */
 ['editModal','dupModal'].forEach(id=>{
   document.getElementById(id).addEventListener('click',function(e){if(e.target===this)closeModal(id);});
 });
-document.getElementById('pwInput').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
 </script>
 </body>
 </html>
