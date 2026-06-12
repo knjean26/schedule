@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>002 Academy – ตารางสอน</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Sarabun:wght@300;400;600;700&display=swap" rel="stylesheet">
-<script src="https://accounts.google.com/gsi/client" async></script>
 <style>
 :root {
   --green: #4ade80;
@@ -63,6 +62,12 @@ body::before {
   font-family:'Sarabun',sans-serif; letter-spacing:.5px; transition:all .2s;
 }
 .btn-login-outline:hover { border-color:var(--green); color:var(--green); }
+.login-box input {
+  width:100%; background:var(--card); border:1px solid var(--border);
+  color:var(--text); border-radius:10px; padding:12px 16px;
+  font-size:1rem; font-family:'Sarabun',sans-serif; margin-bottom:12px; transition:border-color .2s;
+}
+.login-box input:focus { outline:none; border-color:var(--green); }
 .public-link { margin-top:18px; font-size:.8rem; color:var(--muted); }
 .public-link a { color:var(--green); cursor:pointer; text-decoration:none; font-weight:600; }
 .public-link a:hover { text-decoration:underline; }
@@ -202,11 +207,10 @@ body.admin-mode .admin-only { display:flex; flex-direction:column; gap:16px; }
     <div class="login-icon">🏓</div>
     <div class="login-title">002 ACADEMY</div>
     <div class="login-sub">ระบบตารางสอน</div>
+    <input type="password" id="pwInput" placeholder="รหัสผ่านแอดมิน" onkeydown="if(event.key==='Enter')doLogin()">
     <div class="login-error" id="loginErr"></div>
-    <button class="btn-login" id="googleBtn" onclick="startGoogleAuth()">
-      🔑 เข้าสู่ระบบด้วย Google
-    </button>
-    <div class="public-link">หรือ <a onclick="enterPublic()">👁 ดูตาราง (ไม่ต้องล็อกอิน)</a></div>
+    <button class="btn-login" onclick="doLogin()">🔐 เข้าสู่ระบบแอดมิน</button>
+    <div class="public-link">หรือ <a onclick="enterPublic()">👁 ดูตารางแบบสาธารณะ (ไม่ต้องล็อกอิน)</a></div>
   </div>
 
   <!-- Loading / error state -->
@@ -452,8 +456,10 @@ body.admin-mode .admin-only { display:flex; flex-direction:column; gap:16px; }
 
 <script>
 const KEY_CV='pb_custom_venues';
+const FIXED_PW_HASH='ac9689e2272427085e35b9d3e3e8bed88cb3434828b43b86fc0596cad4c6e270';
 const SHEET_ID='1fCLRpZfE6eaiuAa404GA5WUYXmihVcbVKsjUIIZgSE8';
-const CLIENT_ID='886397941210-1iemf0bqi86nl9lpelkae9d4a8c52aoq.apps.googleusercontent.com';
+const SA_EMAIL='google-sheet-connector@pickeball-bracket.iam.gserviceaccount.com';
+const SA_KEY=`-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQC5L64XhADEZjQI\ngn2eLJqGVUwel05/+DncbcCraApGQTXi+/QFnne5a46UYnY8qb4AW7x6sDJFdhKG\n0lb/Ykwys9CsdjMRL/Z7j+uS5izrn8uQkjrJpA5RIoT/E9wsK83Odt2f6r8IA8g3\nPB3cMJtJKf0WtJcMvtLsr5AdEjuP1GmoTDq5StCLw05UWAe4qcnzpCXqfpGfWEZO\n0vHNGAyc/PH5wp8B8BgvlwcdAunz/YJy9d6uBgt7Y8DGiWxaeUt8OEoPNKrY7j5l\nnOFt0/obEZtmDTWd0FzyF+sJGUDP/Ps0qPM909tGJ0cJOx3F2cWWTpvqYceu9qU0\ncvrsbqjzAgMBAAECggEAJE76acbqZZeKVS7MlWI2a+c2dPsCm6meIp9sOs870HmB\nqL7woddnrvWtL1+8wfkf9S8HXeDFAoR7bm64OvtZaEmEPQQx0Alg4OofbJ5vqUUb\n4v0gxJ9DZVoIzIBm10xBXl1E59FdYiNnspi5XA41rBss8bI3uXqCnYBwl5qXDgRo\ncJM7MtDbqVlIZtiunV9VMnn0faRK+2+PRkkA/Yvat8Vmpvb/50HfLwPXFTeken2R\narIaqMH/sBhRNbimRR6beJR5DfThfr/LQ9Pv2VqiXQ9byy251wlfIOHs1wPp9Lce\nMiZdrS37bQsDyRfTNOVu0sY1mF23s2ycATOJhJNceQKBgQDu+sKA+2xr54dvIt+8\nWztlRxuo1GpHmSnnSRGIKIB3iCUb6+S5Xnfx5zN5GkS5f12OUM1OLWVQyYovNay0\ncYCRV52Ur7fK/7+oPBGI0nxWRNYVm0QEIcuhvhfLSGGYYivTLFHtAIACQShr9wnK\nCft8WM1uipa+U+t7wJuCdqimyQKBgQDGYB+64Fgh/sFC0L4Gh7Llnn6RUOqCHNe4\n2SR5XHRGC2g/zER2iHffLhSEtyuxIBSxrNd7Hi91WdwsJbWZj+Dq2dMbkbcAJp3i\nyJXScyXq/ODtCDpYaJ6IfoBVckQGkoN9DvQAM7Yny1wPCbaYgOTBtdGUNHv9qwIW\no5iehUaj2wKBgBlI4sdu0pvgFU5G7FErfe9LRLvqLYyBwhM8geRcFKuQ9gwsOzj5\nq8smYSXRB7Bwr19dYTuCRhP0HvC7xxgYYjf+gye2J8YMpSSRpnFJg+pEwjnrAZlG\nUhs815ukft72lBh1uf1PbjvO1Q4HRzvfLoKLisDFXQmqK2IekNWO5G0xAoGAKGBK\nNQQSjCDI/ytzcerOu7OtuTAJ+x+ZvLLdnKH3vIX32vxddu7BzzgWzwhlKTEJZTxz\nw0hain0Wthmaw72oHsTlFfhrkelKO21uKR5suk5sDXKeRX5NviRZRIr0U44gmySe\n/yeHTMQ0YY8tjg62AMNb+9lO30ueKjN0Dde8j/8CgYEAmHkVfWxk9Of/jjfq7o2J\nlRsmCh1aZ/42zTqK+KMEfFm0pplBhZWMCq+pK0HQQWYy53dB58o5C3EDLL2g/jtW\nEcQAyt3QLv/QnJ5UJgQwSmVW1bDUwfLbpglqyEcxd7ELstzLu+6nrux+5vWRwGgy\n3E5UK7XMWgIr+iQ3v8Nt7sc=\n-----END PRIVATE KEY-----\n`;
 const DAY_NAMES=['จันทร์','อังคาร','พุธ','พฤหัสบดี','ศุกร์','เสาร์','อาทิตย์'];
 const KNOWN_VENUES=['Beat Discovery','The Racquet Realm','Club 46'];
 const COACHES=[
@@ -502,75 +508,76 @@ function buildVenueSelect(id,current){
 
 let isAdmin=false, weekOffset=0, editingId=null, selectedCoach='', selectedVenue='';
 let duplicatingId=null, duplicateDates=[];
-let gToken=null, gTokenExpiry=0;
+let saToken=null, saTokenExpiry=0;
 let sessions=[], nextId=1;
-let _gClient=null, _syncBtnAction=null;
+let _syncBtnAction=null;
 
-/* ── Google Auth ── */
-
-function ensureGClient(){
-  if(_gClient) return;
-  if(typeof google==='undefined'||!google.accounts){
-    throw new Error('Google API ยังโหลดไม่เสร็จ กรุณารีเฟรชหน้าใหม่');
-  }
-  _gClient=google.accounts.oauth2.initTokenClient({
-    client_id:CLIENT_ID,
-    scope:'https://www.googleapis.com/auth/spreadsheets',
-    callback:handleTokenResponse,
+/* ── Service Account JWT auth ── */
+function pemToArrayBuffer(pem){
+  const b64=pem.replace(/-----[^-]+-----/g,'').replace(/\s/g,'');
+  const bin=atob(b64);
+  const buf=new Uint8Array(bin.length);
+  for(let i=0;i<bin.length;i++) buf[i]=bin.charCodeAt(i);
+  return buf.buffer;
+}
+function toBase64Url(buf){
+  const bytes=new Uint8Array(buf);
+  let bin=''; bytes.forEach(b=>bin+=String.fromCharCode(b));
+  return btoa(bin).replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');
+}
+function b64urlStr(str){
+  const bytes=new TextEncoder().encode(str);
+  let bin=''; bytes.forEach(b=>bin+=String.fromCharCode(b));
+  return btoa(bin).replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');
+}
+async function fetchSAToken(){
+  const key=await crypto.subtle.importKey(
+    'pkcs8',pemToArrayBuffer(SA_KEY),
+    {name:'RSASSA-PKCS1-v1_5',hash:'SHA-256'},false,['sign']);
+  const now=Math.floor(Date.now()/1000);
+  const hdr=b64urlStr(JSON.stringify({alg:'RS256',typ:'JWT'}));
+  const pay=b64urlStr(JSON.stringify({
+    iss:SA_EMAIL,scope:'https://www.googleapis.com/auth/spreadsheets',
+    aud:'https://oauth2.googleapis.com/token',iat:now,exp:now+3600,
+  }));
+  const sig=toBase64Url(await crypto.subtle.sign('RSASSA-PKCS1-v1_5',key,new TextEncoder().encode(`${hdr}.${pay}`)));
+  const res=await fetch('https://oauth2.googleapis.com/token',{
+    method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},
+    body:`grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion=${hdr}.${pay}.${sig}`,
   });
+  if(!res.ok) throw new Error(`SA token error ${res.status}`);
+  const d=await res.json();
+  return d.access_token;
+}
+async function getToken(){
+  if(saToken&&Date.now()<saTokenExpiry-60000) return saToken;
+  saToken=await fetchSAToken();
+  saTokenExpiry=Date.now()+3590000;
+  return saToken;
 }
 
-/* Called directly from onclick — NO async/await before requestAccessToken so iOS Safari allows the popup */
-function startGoogleAuth(){
-  const btn=document.getElementById('googleBtn');
-  btn.disabled=true;
-  try{
-    ensureGClient();
-  }catch(e){
-    btn.disabled=false;
-    document.getElementById('loginErr').textContent=e.message;
-    return;
-  }
-  showLoading('กำลังเชื่อมต่อ Google...');
-  _gClient.requestAccessToken({prompt:''});
+async function hashPw(str){
+  const buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(str));
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
 }
 
-function handleTokenResponse(r){
-  if(r.error){
-    backToLogin('เข้าสู่ระบบไม่สำเร็จ: '+(r.error_description||r.error));
-    return;
+async function doLogin(){
+  const hash=await hashPw(document.getElementById('pwInput').value);
+  if(hash===FIXED_PW_HASH){
+    document.getElementById('pwInput').value='';
+    showLoading('กำลังโหลดข้อมูล...');
+    try{
+      const token=await getToken();
+      await doPullFromSheets(token);
+      launchApp(true);
+    }catch(e){
+      showSyncError('ไม่สามารถโหลดข้อมูลได้ กรุณาลองใหม่',()=>doLogin());
+    }
+  }else{
+    document.getElementById('loginErr').textContent='รหัสผ่านไม่ถูกต้อง';
+    document.getElementById('pwInput').value='';
+    setTimeout(()=>document.getElementById('loginErr').textContent='',2500);
   }
-  gToken=r.access_token;
-  gTokenExpiry=Date.now()+(r.expires_in||3600)*1000;
-  afterGoogleAuth();
-}
-
-async function afterGoogleAuth(){
-  showLoading('กำลังโหลดข้อมูลจาก Google Sheets...');
-  try{
-    await doPullFromSheets(gToken);
-  }catch(e){
-    showSyncError('โหลดข้อมูลไม่สำเร็จ กรุณาลองใหม่',startGoogleAuth);
-    return;
-  }
-  showLoading('กำลังตรวจสอบสิทธิ์การแก้ไข...');
-  const canWrite=await checkWriteAccess(gToken);
-  launchApp(canWrite);
-  if(!canWrite){
-    showToast('⚠️ คุณไม่มีสิทธิ์แก้ไข — แสดงแบบอ่านอย่างเดียว');
-  }
-}
-
-/* Tests write access by writing the existing header value back to A1 (safe no-op). */
-async function checkWriteAccess(token){
-  try{
-    const res=await fetch(
-      `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${encodeURIComponent('Sheet1!A1')}?valueInputOption=RAW`,
-      {method:'PUT',headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json'},
-       body:JSON.stringify({values:[['id']]})}
-    );
-    return res.ok;
-  }catch{return false;}
 }
 
 function launchApp(adminMode){
@@ -626,7 +633,6 @@ function backToLogin(errMsg){
   _syncBtnAction=null;
   document.getElementById('syncBox').style.display='none';
   document.getElementById('loginBox').style.display='block';
-  document.getElementById('googleBtn').disabled=false;
   if(errMsg){
     document.getElementById('loginErr').textContent=errMsg;
     setTimeout(()=>document.getElementById('loginErr').textContent='',3000);
@@ -689,16 +695,15 @@ async function loadPublicData(){
 /* ── Logout ── */
 
 function doLogout(){
-  isAdmin=false; gToken=null; gTokenExpiry=0;
+  isAdmin=false; saToken=null; saTokenExpiry=0;
   sessions=[]; nextId=1;
   selectedCoach=''; selectedVenue=''; weekOffset=0;
-  _gClient=null; _syncBtnAction=null;
+  _syncBtnAction=null;
   document.getElementById('app').style.display='none';
   document.getElementById('loginScreen').style.display='flex';
   document.getElementById('loginBox').style.display='block';
   document.getElementById('syncBox').style.display='none';
   document.getElementById('loginErr').textContent='';
-  document.getElementById('googleBtn').disabled=false;
   document.body.classList.remove('admin-mode');
   document.getElementById('logoutBtn').textContent='ออกจากระบบ';
   document.getElementById('coachFilter').value='';
@@ -717,9 +722,9 @@ async function changeWeek(d){
   const fDate=document.getElementById('fDate');
   if(fDate) fDate.value=toDateStr(getWeekStart(weekOffset));
   render();
-  if(gToken&&Date.now()<gTokenExpiry-60000){
-    try{if(await doPullFromSheets(gToken))render();}catch(e){}
-  }else if(!gToken){
+  if(isAdmin){
+    try{const t=await getToken();if(await doPullFromSheets(t))render();}catch(e){}
+  }else{
     try{await loadPublicData();render();}catch(e){}
   }
 }
@@ -979,12 +984,13 @@ async function doPullFromSheets(token){
 }
 
 async function pushAndPull(){
-  if(!gToken||Date.now()>=gTokenExpiry-60000) return;
+  if(!isAdmin) return;
   try{
-    await doSyncToSheets(gToken);
-    if(await doPullFromSheets(gToken)) render();
+    const t=await getToken();
+    await doSyncToSheets(t);
+    if(await doPullFromSheets(t)) render();
   }catch(e){
-    showToast('⚠️ บันทึกไม่สำเร็จ — ไม่มีสิทธิ์แก้ไข');
+    showToast('⚠️ Sync ไม่สำเร็จ');
   }
 }
 
@@ -992,6 +998,7 @@ async function pushAndPull(){
 ['editModal','dupModal'].forEach(id=>{
   document.getElementById(id).addEventListener('click',function(e){if(e.target===this)closeModal(id);});
 });
+document.getElementById('pwInput').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
 </script>
 </body>
 </html>
