@@ -234,9 +234,6 @@ body.admin-mode .admin-only { display:flex; flex-direction:column; gap:16px; }
       <div class="coach-filter-wrap">
         <select id="coachFilter" onchange="applyCoachFilter()">
           <option value="">👤 โค้ชทั้งหมด</option>
-          <option>เอก</option><option>เอิ้น</option><option>แทน</option><option>พีท</option>
-          <option>แม๊ก</option><option>นิว</option><option>เฟรม</option><option>ภูมิ</option>
-          <option>โอ๊ต</option><option>เอ๋ย</option><option>โฟล์ค</option>
         </select>
       </div>
       <div class="coach-filter-wrap">
@@ -257,7 +254,7 @@ body.admin-mode .admin-only { display:flex; flex-direction:column; gap:16px; }
     <div class="stat-card"><div class="stat-num" id="statTotal">0</div><div class="stat-label">คลาสทั้งหมด</div></div>
     <div class="stat-card"><div class="stat-num" id="statStudents">0</div><div class="stat-label">นักเรียนรวม</div></div>
     <div class="stat-card"><div class="stat-num" id="statHours">0</div><div class="stat-label">ชั่วโมงสอน</div></div>
-    <div class="stat-card"><div class="stat-num">11</div><div class="stat-label">โค้ช</div></div>
+    <div class="stat-card"><div class="stat-num" id="statCoaches">0</div><div class="stat-label">โค้ช</div></div>
   </div>
 
   <div class="main-grid">
@@ -312,11 +309,7 @@ body.admin-mode .admin-only { display:flex; flex-direction:column; gap:16px; }
           </div>
           <div class="form-group">
             <label class="form-label">โค้ช</label>
-            <select class="form-control" id="fCoach">
-              <option>เอก</option><option>เอิ้น</option><option>แทน</option><option>พีท</option>
-              <option>แม๊ก</option><option>นิว</option><option>เฟรม</option><option>ภูมิ</option>
-              <option>โอ๊ต</option><option>เอ๋ย</option><option>โฟล์ค</option>
-            </select>
+            <select class="form-control" id="fCoach"></select>
           </div>
           <div class="form-group">
             <label class="form-label">สถานที่</label>
@@ -339,8 +332,15 @@ body.admin-mode .admin-only { display:flex; flex-direction:column; gap:16px; }
         </div>
       </div>
       <div class="panel">
-        <div class="panel-header">👤 โค้ชประจำ</div>
+        <div class="panel-header">👤 จัดการโค้ช</div>
         <div class="panel-body" id="coachList"></div>
+        <div class="panel-body" style="border-top:1px solid var(--border);padding-top:10px">
+          <div class="form-row">
+            <div class="form-group" style="margin-bottom:0"><input class="form-control" id="newCoachName" placeholder="ชื่อโค้ช"></div>
+            <div class="form-group" style="margin-bottom:0"><input class="form-control" id="newCoachEmoji" placeholder="⚫" style="max-width:70px"></div>
+          </div>
+          <button class="btn-primary" style="margin-top:8px" onclick="addCoach()">+ เพิ่มโค้ช</button>
+        </div>
       </div>
       <div class="panel">
         <div class="panel-header">⚙️ ตั้งค่า</div>
@@ -402,11 +402,7 @@ body.admin-mode .admin-only { display:flex; flex-direction:column; gap:16px; }
     </div>
     <div class="form-group">
       <label class="form-label">โค้ช</label>
-      <select class="form-control" id="mCoach">
-        <option>เอก</option><option>เอิ้น</option><option>แทน</option><option>พีท</option>
-        <option>แม๊ก</option><option>นิว</option><option>เฟรม</option><option>ภูมิ</option>
-        <option>โอ๊ต</option><option>เอ๋ย</option><option>โฟล์ค</option>
-      </select>
+      <select class="form-control" id="mCoach"></select>
     </div>
     <div class="form-group">
       <label class="form-label">สถานที่</label>
@@ -462,7 +458,7 @@ const SA_EMAIL='google-sheet-connector@pickeball-bracket.iam.gserviceaccount.com
 const SA_KEY=`-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQC5L64XhADEZjQI\ngn2eLJqGVUwel05/+DncbcCraApGQTXi+/QFnne5a46UYnY8qb4AW7x6sDJFdhKG\n0lb/Ykwys9CsdjMRL/Z7j+uS5izrn8uQkjrJpA5RIoT/E9wsK83Odt2f6r8IA8g3\nPB3cMJtJKf0WtJcMvtLsr5AdEjuP1GmoTDq5StCLw05UWAe4qcnzpCXqfpGfWEZO\n0vHNGAyc/PH5wp8B8BgvlwcdAunz/YJy9d6uBgt7Y8DGiWxaeUt8OEoPNKrY7j5l\nnOFt0/obEZtmDTWd0FzyF+sJGUDP/Ps0qPM909tGJ0cJOx3F2cWWTpvqYceu9qU0\ncvrsbqjzAgMBAAECggEAJE76acbqZZeKVS7MlWI2a+c2dPsCm6meIp9sOs870HmB\nqL7woddnrvWtL1+8wfkf9S8HXeDFAoR7bm64OvtZaEmEPQQx0Alg4OofbJ5vqUUb\n4v0gxJ9DZVoIzIBm10xBXl1E59FdYiNnspi5XA41rBss8bI3uXqCnYBwl5qXDgRo\ncJM7MtDbqVlIZtiunV9VMnn0faRK+2+PRkkA/Yvat8Vmpvb/50HfLwPXFTeken2R\narIaqMH/sBhRNbimRR6beJR5DfThfr/LQ9Pv2VqiXQ9byy251wlfIOHs1wPp9Lce\nMiZdrS37bQsDyRfTNOVu0sY1mF23s2ycATOJhJNceQKBgQDu+sKA+2xr54dvIt+8\nWztlRxuo1GpHmSnnSRGIKIB3iCUb6+S5Xnfx5zN5GkS5f12OUM1OLWVQyYovNay0\ncYCRV52Ur7fK/7+oPBGI0nxWRNYVm0QEIcuhvhfLSGGYYivTLFHtAIACQShr9wnK\nCft8WM1uipa+U+t7wJuCdqimyQKBgQDGYB+64Fgh/sFC0L4Gh7Llnn6RUOqCHNe4\n2SR5XHRGC2g/zER2iHffLhSEtyuxIBSxrNd7Hi91WdwsJbWZj+Dq2dMbkbcAJp3i\nyJXScyXq/ODtCDpYaJ6IfoBVckQGkoN9DvQAM7Yny1wPCbaYgOTBtdGUNHv9qwIW\no5iehUaj2wKBgBlI4sdu0pvgFU5G7FErfe9LRLvqLYyBwhM8geRcFKuQ9gwsOzj5\nq8smYSXRB7Bwr19dYTuCRhP0HvC7xxgYYjf+gye2J8YMpSSRpnFJg+pEwjnrAZlG\nUhs815ukft72lBh1uf1PbjvO1Q4HRzvfLoKLisDFXQmqK2IekNWO5G0xAoGAKGBK\nNQQSjCDI/ytzcerOu7OtuTAJ+x+ZvLLdnKH3vIX32vxddu7BzzgWzwhlKTEJZTxz\nw0hain0Wthmaw72oHsTlFfhrkelKO21uKR5suk5sDXKeRX5NviRZRIr0U44gmySe\n/yeHTMQ0YY8tjg62AMNb+9lO30ueKjN0Dde8j/8CgYEAmHkVfWxk9Of/jjfq7o2J\nlRsmCh1aZ/42zTqK+KMEfFm0pplBhZWMCq+pK0HQQWYy53dB58o5C3EDLL2g/jtW\nEcQAyt3QLv/QnJ5UJgQwSmVW1bDUwfLbpglqyEcxd7ELstzLu+6nrux+5vWRwGgy\n3E5UK7XMWgIr+iQ3v8Nt7sc=\n-----END PRIVATE KEY-----\n`;
 const DAY_NAMES=['จันทร์','อังคาร','พุธ','พฤหัสบดี','ศุกร์','เสาร์','อาทิตย์'];
 const KNOWN_VENUES=['Beat Discovery','The Racquet Realm','Club 46'];
-const COACHES=[
+const DEFAULT_COACHES=[
   {name:'เอก',emoji:'🟢'},{name:'เอิ้น',emoji:'🔵'},{name:'แทน',emoji:'🟡'},
   {name:'พีท',emoji:'🟠'},{name:'แม๊ก',emoji:'🔴'},{name:'นิว',emoji:'🟣'},
   {name:'เฟรม',emoji:'🟤'},{name:'ภูมิ',emoji:'⚪'},{name:'โอ๊ต',emoji:'🟢'},
@@ -507,6 +503,7 @@ function buildVenueSelect(id,current){
 }
 
 let isAdmin=false, weekOffset=0, editingId=null, selectedCoach='', selectedVenue='';
+let coaches=[];
 let duplicatingId=null, duplicateDates=[];
 let saToken=null, saTokenExpiry=0;
 let sessions=[], nextId=1;
@@ -568,6 +565,7 @@ async function doLogin(){
     showLoading('กำลังโหลดข้อมูล...');
     try{
       const token=await getToken();
+      await ensureCoachesSheet(token);
       await doPullFromSheets(token);
       launchApp(true);
     }catch(e){
@@ -593,6 +591,7 @@ function launchApp(adminMode){
     document.getElementById('modeBadge').textContent='👁 ดูตาราง';
     document.getElementById('logoutBtn').textContent='← กลับ';
   }
+  populateCoachDropdowns();
   document.getElementById('loginScreen').style.display='none';
   document.getElementById('app').style.display='block';
   render();
@@ -648,6 +647,8 @@ async function enterPublic(){
   document.body.classList.remove('admin-mode');
   showLoading('กำลังโหลดตาราง...');
   try{
+    await loadPublicCoaches();
+    if(!coaches.length) coaches=DEFAULT_COACHES.map(c=>({...c,active:'yes'}));
     await loadPublicData();
     launchApp(false);
   }catch(e){
@@ -785,6 +786,7 @@ function render(){
   document.getElementById('statTotal').textContent=sessions.length;
   document.getElementById('statStudents').textContent=sessions.reduce((a,s)=>a+s.students,0);
   document.getElementById('statHours').textContent=sessions.length;
+  document.getElementById('statCoaches').textContent=coaches.filter(c=>c.active==='yes').length;
 
   const weekSessions=sessions.filter(s=>s.date>=wsStr&&s.date<=weStr);
 
@@ -841,12 +843,16 @@ function render(){
     updateEndTime('f');
     buildVenueSelect('fVenue',document.getElementById('fVenue').value||'Beat Discovery');
 
-    document.getElementById('coachList').innerHTML=COACHES.map(c=>`
+    document.getElementById('coachList').innerHTML=coaches.map(c=>`
       <div class="coach-item">
-        <div class="coach-avatar">${c.emoji}</div>
-        <div><div class="coach-name">${c.name}</div><div class="coach-specialty">โค้ช</div></div>
-        <div class="coach-sessions">${sessions.filter(s=>s.coach===c.name).length}</div>
-      </div>`).join('');
+        <div class="coach-avatar" style="${c.active==='no'?'opacity:.4':''}">${c.emoji}</div>
+        <div style="flex:1"><div class="coach-name" style="${c.active==='no'?'opacity:.5':''}">${c.name}</div><div class="coach-specialty">${c.active==='yes'?'✅ ว่าง':'⛔ ไม่ว่าง'}</div></div>
+        <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
+          <span style="font-family:'Bebas Neue',sans-serif;font-size:1.1rem;color:var(--green)">${sessions.filter(s=>s.coach===c.name).length}</span>
+          <button class="btn-sm" onclick="toggleCoachActive('${c.name}')">${c.active==='yes'?'ลา':'กลับ'}</button>
+          <button class="btn-sm danger" onclick="removeCoach('${c.name}')">🗑️</button>
+        </div>
+      </div>`).join('')||'<div style="color:var(--muted);font-size:.82rem;text-align:center;padding:8px 0">ยังไม่มีโค้ช</div>';
   }
 }
 
@@ -931,6 +937,8 @@ function clearAllData(){
 /* ── Google Sheets API ── */
 
 const GS_RANGE='Sheet1!A1:K';
+const GS_COACHES_RANGE='Coaches!A1:C';
+const GS_COACHES_HEADERS=['name','emoji','active'];
 const GS_HEADERS=['id','date','time','finishTime','duration(hrs)','title','level','students','coach','venue','court'];
 
 function sessionToRow(s){
@@ -992,6 +1000,110 @@ async function pushAndPull(){
   }catch(e){
     showToast('⚠️ Sync ไม่สำเร็จ');
   }
+}
+
+/* ── Coaches (sheet + management) ── */
+
+async function loadPublicCoaches(){
+  try{
+    const res=await fetch(`https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=Coaches`);
+    if(!res.ok) return;
+    const rows=parseCSV(await res.text());
+    if(rows.length<2) return;
+    const[header,...dataRows]=rows;
+    coaches=dataRows.map(row=>{
+      const o={}; header.forEach((k,i)=>o[k]=row[i]||'');
+      return{name:o.name||'',emoji:o.emoji||'⚫',active:o.active||'yes'};
+    }).filter(c=>c.name);
+  }catch(e){}
+}
+
+async function doPullCoachesFromSheets(token){
+  const res=await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${encodeURIComponent(GS_COACHES_RANGE)}`,
+    {headers:{Authorization:`Bearer ${token}`}});
+  if(!res.ok) return false;
+  const data=await res.json();
+  if(!data.values||data.values.length<2) return false;
+  const[header,...rows]=data.values;
+  coaches=rows.map(row=>{
+    const o={}; header.forEach((k,i)=>o[k]=row[i]||'');
+    return{name:o.name||'',emoji:o.emoji||'⚫',active:o.active||'yes'};
+  }).filter(c=>c.name);
+  return true;
+}
+
+async function doSyncCoachesToSheets(token){
+  const rows=[GS_COACHES_HEADERS,...coaches.map(c=>[c.name,c.emoji,c.active||'yes'])];
+  await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${encodeURIComponent(GS_COACHES_RANGE)}:clear`,
+    {method:'POST',headers:{Authorization:`Bearer ${token}`}});
+  const res=await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${encodeURIComponent(GS_COACHES_RANGE)}?valueInputOption=RAW`,
+    {method:'PUT',headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json'},
+     body:JSON.stringify({values:rows})});
+  if(!res.ok) throw new Error(`Coaches sheet error ${res.status}`);
+}
+
+async function ensureCoachesSheet(token){
+  const pulled=await doPullCoachesFromSheets(token);
+  if(!pulled||!coaches.length){
+    await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}:batchUpdate`,{
+      method:'POST',
+      headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json'},
+      body:JSON.stringify({requests:[{addSheet:{properties:{title:'Coaches'}}}]}),
+    }).catch(()=>{});
+    coaches=DEFAULT_COACHES.map(c=>({...c,active:'yes'}));
+    await doSyncCoachesToSheets(token);
+  }
+}
+
+function populateCoachDropdowns(){
+  const active=coaches.filter(c=>c.active==='yes');
+  const fSel=document.getElementById('fCoach');
+  if(fSel) fSel.innerHTML=active.map(c=>`<option value="${c.name}">${c.name}</option>`).join('')||'<option value="">—</option>';
+  const mSel=document.getElementById('mCoach');
+  if(mSel) mSel.innerHTML=coaches.map(c=>`<option value="${c.name}">${c.name}${c.active==='no'?' (ไม่ว่าง)':''}</option>`).join('')||'<option value="">—</option>';
+  const filterSel=document.getElementById('coachFilter');
+  if(filterSel){
+    const prev=filterSel.value;
+    filterSel.innerHTML='<option value="">👤 โค้ชทั้งหมด</option>'
+      +coaches.map(c=>`<option value="${c.name}"${c.name===prev?' selected':''}>${c.name}${c.active==='no'?' (ไม่ว่าง)':''}</option>`).join('');
+  }
+}
+
+async function saveCoaches(){
+  try{const t=await getToken();await doSyncCoachesToSheets(t);}
+  catch(e){showToast('⚠️ บันทึกโค้ชไม่สำเร็จ');}
+}
+
+async function addCoach(){
+  const name=document.getElementById('newCoachName').value.trim();
+  const emoji=document.getElementById('newCoachEmoji').value.trim()||'⚫';
+  if(!name){showToast('⚠️ กรุณาใส่ชื่อโค้ช');return;}
+  if(coaches.find(c=>c.name===name)){showToast('⚠️ มีโค้ชชื่อนี้แล้ว');return;}
+  coaches.push({name,emoji,active:'yes'});
+  document.getElementById('newCoachName').value='';
+  document.getElementById('newCoachEmoji').value='';
+  await saveCoaches();
+  showToast(`✅ เพิ่มโค้ช ${name} แล้ว`);
+  populateCoachDropdowns();
+  render();
+}
+
+async function removeCoach(name){
+  if(!confirm(`ลบโค้ช "${name}" ออกจากรายการ?`))return;
+  coaches=coaches.filter(c=>c.name!==name);
+  await saveCoaches();
+  showToast(`🗑️ ลบโค้ช ${name} แล้ว`);
+  populateCoachDropdowns();
+  render();
+}
+
+async function toggleCoachActive(name){
+  const c=coaches.find(x=>x.name===name); if(!c)return;
+  c.active=c.active==='yes'?'no':'yes';
+  await saveCoaches();
+  showToast(`${c.active==='yes'?'✅':'⛔'} ${name} ${c.active==='yes'?'ว่าง':'ไม่ว่าง'}`);
+  populateCoachDropdowns();
+  render();
 }
 
 /* ── Init ── */
