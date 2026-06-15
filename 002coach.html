@@ -99,6 +99,7 @@ h1 { font-family:'Bebas Neue',sans-serif; font-size:2rem; letter-spacing:3px;
 .mode-badge { display:flex; align-items:center; gap:6px; padding:6px 14px; border-radius:20px; font-size:.75rem; font-weight:700; letter-spacing:1px; text-transform:uppercase; }
 .mode-admin { background:rgba(74,222,128,.15); border:1px solid rgba(74,222,128,.4); color:var(--green); }
 .mode-public { background:rgba(163,230,53,.1); border:1px solid rgba(163,230,53,.3); color:var(--lime); }
+.mode-coach { background:rgba(255,165,0,.15); border:1px solid rgba(255,165,0,.4); color:#ffa500; }
 .coach-filter-wrap { background:var(--panel); border:1px solid var(--border); border-radius:10px; padding:4px 8px; }
 .coach-filter-wrap select { background:transparent; border:none; color:var(--text); font-family:'Sarabun',sans-serif; font-size:.85rem; font-weight:600; cursor:pointer; outline:none; padding:4px 4px; }
 .coach-filter-wrap select option { background:var(--card); }
@@ -119,7 +120,10 @@ h1 { font-family:'Bebas Neue',sans-serif; font-size:2rem; letter-spacing:3px;
 /* Main */
 .main-grid { display:grid; grid-template-columns:1fr 320px; gap:18px; }
 .admin-only { display:none; }
+body.coach-mode .admin-only,
 body.admin-mode .admin-only { display:flex; flex-direction:column; gap:16px; }
+.admin-panel { display:none; }
+body.admin-mode .admin-panel { display:block; }
 
 /* Day cards */
 .calendar-section { display:flex; flex-direction:column; gap:14px; }
@@ -209,7 +213,7 @@ body.admin-mode .admin-only { display:flex; flex-direction:column; gap:16px; }
     <div class="login-sub">ระบบตารางสอน</div>
     <input type="password" id="pwInput" placeholder="รหัสผ่านแอดมิน" onkeydown="if(event.key==='Enter')doLogin()">
     <div class="login-error" id="loginErr"></div>
-    <button class="btn-login" onclick="doLogin()">🔐 เข้าสู่ระบบแอดมิน</button>
+    <button class="btn-login" onclick="doLogin()">🔐 เข้าสู่ระบบ</button>
     <div class="public-link">หรือ <a onclick="enterPublic()">👁 ดูตารางแบบสาธารณะ (ไม่ต้องล็อกอิน)</a></div>
   </div>
 
@@ -331,7 +335,7 @@ body.admin-mode .admin-only { display:flex; flex-direction:column; gap:16px; }
           <button class="btn-primary" onclick="addSession()">+ เพิ่มคลาส</button>
         </div>
       </div>
-      <div class="panel">
+      <div class="panel admin-panel">
         <div class="panel-header">👤 จัดการโค้ช</div>
         <div class="panel-body" id="coachList"></div>
         <div class="panel-body" style="border-top:1px solid var(--border);padding-top:10px">
@@ -342,7 +346,15 @@ body.admin-mode .admin-only { display:flex; flex-direction:column; gap:16px; }
           <button class="btn-primary" style="margin-top:8px" onclick="addCoach()">+ เพิ่มโค้ช</button>
         </div>
       </div>
-      <div class="panel">
+      <div class="panel admin-panel">
+        <div class="panel-header">📍 จัดการสถานที่</div>
+        <div class="panel-body" id="venueList"></div>
+        <div class="panel-body" style="border-top:1px solid var(--border);padding-top:10px">
+          <input class="form-control" id="newVenueName" placeholder="ชื่อสถานที่">
+          <button class="btn-primary" style="margin-top:8px" onclick="addVenue()">+ เพิ่มสถานที่</button>
+        </div>
+      </div>
+      <div class="panel admin-panel">
         <div class="panel-header">⚙️ ตั้งค่า</div>
         <div class="panel-body">
           <button class="btn-primary" style="background:linear-gradient(135deg,#f87171,#fb923c)" onclick="clearAllData()">🗑️ ล้างข้อมูลทั้งหมด</button>
@@ -452,12 +464,15 @@ body.admin-mode .admin-only { display:flex; flex-direction:column; gap:16px; }
 
 <script>
 const KEY_CV='pb_custom_venues';
-const FIXED_PW_HASH='ac9689e2272427085e35b9d3e3e8bed88cb3434828b43b86fc0596cad4c6e270';
+const KEY_VENUES='pb_venues';
+const COACH_PW_HASH='4678b1eb0e43875ed11964d011f30516703ac881f9133f53ef45712776661154';
+const ADMIN_PW_HASH='41e5653fc7aeb894026d6bb7b2db7f65902b454945fa8fd65a6327047b5277fb';
 const SHEET_ID='1fCLRpZfE6eaiuAa404GA5WUYXmihVcbVKsjUIIZgSE8';
 const SA_EMAIL='google-sheet-connector@pickeball-bracket.iam.gserviceaccount.com';
 const SA_KEY=`-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQC5L64XhADEZjQI\ngn2eLJqGVUwel05/+DncbcCraApGQTXi+/QFnne5a46UYnY8qb4AW7x6sDJFdhKG\n0lb/Ykwys9CsdjMRL/Z7j+uS5izrn8uQkjrJpA5RIoT/E9wsK83Odt2f6r8IA8g3\nPB3cMJtJKf0WtJcMvtLsr5AdEjuP1GmoTDq5StCLw05UWAe4qcnzpCXqfpGfWEZO\n0vHNGAyc/PH5wp8B8BgvlwcdAunz/YJy9d6uBgt7Y8DGiWxaeUt8OEoPNKrY7j5l\nnOFt0/obEZtmDTWd0FzyF+sJGUDP/Ps0qPM909tGJ0cJOx3F2cWWTpvqYceu9qU0\ncvrsbqjzAgMBAAECggEAJE76acbqZZeKVS7MlWI2a+c2dPsCm6meIp9sOs870HmB\nqL7woddnrvWtL1+8wfkf9S8HXeDFAoR7bm64OvtZaEmEPQQx0Alg4OofbJ5vqUUb\n4v0gxJ9DZVoIzIBm10xBXl1E59FdYiNnspi5XA41rBss8bI3uXqCnYBwl5qXDgRo\ncJM7MtDbqVlIZtiunV9VMnn0faRK+2+PRkkA/Yvat8Vmpvb/50HfLwPXFTeken2R\narIaqMH/sBhRNbimRR6beJR5DfThfr/LQ9Pv2VqiXQ9byy251wlfIOHs1wPp9Lce\nMiZdrS37bQsDyRfTNOVu0sY1mF23s2ycATOJhJNceQKBgQDu+sKA+2xr54dvIt+8\nWztlRxuo1GpHmSnnSRGIKIB3iCUb6+S5Xnfx5zN5GkS5f12OUM1OLWVQyYovNay0\ncYCRV52Ur7fK/7+oPBGI0nxWRNYVm0QEIcuhvhfLSGGYYivTLFHtAIACQShr9wnK\nCft8WM1uipa+U+t7wJuCdqimyQKBgQDGYB+64Fgh/sFC0L4Gh7Llnn6RUOqCHNe4\n2SR5XHRGC2g/zER2iHffLhSEtyuxIBSxrNd7Hi91WdwsJbWZj+Dq2dMbkbcAJp3i\nyJXScyXq/ODtCDpYaJ6IfoBVckQGkoN9DvQAM7Yny1wPCbaYgOTBtdGUNHv9qwIW\no5iehUaj2wKBgBlI4sdu0pvgFU5G7FErfe9LRLvqLYyBwhM8geRcFKuQ9gwsOzj5\nq8smYSXRB7Bwr19dYTuCRhP0HvC7xxgYYjf+gye2J8YMpSSRpnFJg+pEwjnrAZlG\nUhs815ukft72lBh1uf1PbjvO1Q4HRzvfLoKLisDFXQmqK2IekNWO5G0xAoGAKGBK\nNQQSjCDI/ytzcerOu7OtuTAJ+x+ZvLLdnKH3vIX32vxddu7BzzgWzwhlKTEJZTxz\nw0hain0Wthmaw72oHsTlFfhrkelKO21uKR5suk5sDXKeRX5NviRZRIr0U44gmySe\n/yeHTMQ0YY8tjg62AMNb+9lO30ueKjN0Dde8j/8CgYEAmHkVfWxk9Of/jjfq7o2J\nlRsmCh1aZ/42zTqK+KMEfFm0pplBhZWMCq+pK0HQQWYy53dB58o5C3EDLL2g/jtW\nEcQAyt3QLv/QnJ5UJgQwSmVW1bDUwfLbpglqyEcxd7ELstzLu+6nrux+5vWRwGgy\n3E5UK7XMWgIr+iQ3v8Nt7sc=\n-----END PRIVATE KEY-----\n`;
 const DAY_NAMES=['จันทร์','อังคาร','พุธ','พฤหัสบดี','ศุกร์','เสาร์','อาทิตย์'];
 const KNOWN_VENUES=['Beat Discovery','The Racquet Realm','Club 46'];
+let venues=(()=>{try{const s=JSON.parse(localStorage.getItem(KEY_VENUES));return s&&s.length?s:[...KNOWN_VENUES];}catch{return[...KNOWN_VENUES];}})();
 const DEFAULT_COACHES=[
   {name:'เอก',emoji:'🟢'},{name:'เอิ้น',emoji:'🔵'},{name:'แทน',emoji:'🟡'},
   {name:'พีท',emoji:'🟠'},{name:'แม๊ก',emoji:'🔴'},{name:'นิว',emoji:'🟣'},
@@ -491,18 +506,17 @@ function toggleVenueOther(p){
 const getVenueName=s=>s.venue==='Other'?(s.venueOther||''):(s.venue||'');
 function getCustomVenues(){try{return JSON.parse(localStorage.getItem(KEY_CV))||[];}catch{return[];}}
 function saveCustomVenue(name){
-  if(!name||KNOWN_VENUES.includes(name))return;
-  const cv=getCustomVenues();
-  if(!cv.includes(name)){cv.push(name);localStorage.setItem(KEY_CV,JSON.stringify(cv));}
+  if(!name||venues.includes(name))return;
+  venues.push(name);
+  localStorage.setItem(KEY_VENUES,JSON.stringify(venues));
 }
 function buildVenueSelect(id,current){
   const sel=document.getElementById(id); if(!sel)return;
-  const opts=[...KNOWN_VENUES,...getCustomVenues()];
-  sel.innerHTML=opts.map(v=>`<option value="${v}"${v===current?' selected':''}>${v}</option>`).join('')
+  sel.innerHTML=venues.map(v=>`<option value="${v}"${v===current?' selected':''}>${v}</option>`).join('')
     +`<option value="Other"${current==='Other'?' selected':''}>อื่นๆ (ระบุเอง)</option>`;
 }
 
-let isAdmin=false, weekOffset=0, editingId=null, selectedCoach='', selectedVenue='';
+let isAdmin=false, isCoach=false, weekOffset=0, editingId=null, selectedCoach='', selectedVenue='';
 let coaches=[];
 let duplicatingId=null, duplicateDates=[];
 let saToken=null, saTokenExpiry=0;
@@ -560,14 +574,18 @@ async function hashPw(str){
 
 async function doLogin(){
   const hash=await hashPw(document.getElementById('pwInput').value);
-  if(hash===FIXED_PW_HASH){
+  let role='';
+  if(hash===ADMIN_PW_HASH) role='admin';
+  else if(hash===COACH_PW_HASH) role='coach';
+  if(role){
     document.getElementById('pwInput').value='';
     showLoading('กำลังโหลดข้อมูล...');
     try{
       const token=await getToken();
-      await ensureCoachesSheet(token);
+      if(role==='admin') await ensureCoachesSheet(token);
+      else await doPullCoachesFromSheets(token).catch(()=>{coaches=DEFAULT_COACHES.map(c=>({...c,active:'yes'}));});
       await doPullFromSheets(token);
-      launchApp(true);
+      launchApp(role);
     }catch(e){
       showSyncError('ไม่สามารถโหลดข้อมูลได้ กรุณาลองใหม่',()=>doLogin());
     }
@@ -578,15 +596,21 @@ async function doLogin(){
   }
 }
 
-function launchApp(adminMode){
-  isAdmin=adminMode;
-  if(adminMode){
+function launchApp(role){
+  isAdmin=role==='admin';
+  isCoach=role==='coach';
+  document.body.classList.remove('admin-mode','coach-mode');
+  if(isAdmin){
     document.body.classList.add('admin-mode');
     document.getElementById('modeBadge').className='mode-badge mode-admin';
     document.getElementById('modeBadge').textContent='🔐 แอดมิน';
     document.getElementById('logoutBtn').textContent='ออกจากระบบ';
+  }else if(isCoach){
+    document.body.classList.add('coach-mode');
+    document.getElementById('modeBadge').className='mode-badge mode-coach';
+    document.getElementById('modeBadge').textContent='🏓 โค้ช';
+    document.getElementById('logoutBtn').textContent='ออกจากระบบ';
   }else{
-    document.body.classList.remove('admin-mode');
     document.getElementById('modeBadge').className='mode-badge mode-public';
     document.getElementById('modeBadge').textContent='👁 ดูตาราง';
     document.getElementById('logoutBtn').textContent='← กลับ';
@@ -643,14 +667,14 @@ function backToLogin(errMsg){
 /* ── Public view (no login) ── */
 
 async function enterPublic(){
-  isAdmin=false;
-  document.body.classList.remove('admin-mode');
+  isAdmin=false; isCoach=false;
+  document.body.classList.remove('admin-mode','coach-mode');
   showLoading('กำลังโหลดตาราง...');
   try{
     await loadPublicCoaches();
     if(!coaches.length) coaches=DEFAULT_COACHES.map(c=>({...c,active:'yes'}));
     await loadPublicData();
-    launchApp(false);
+    launchApp('public');
   }catch(e){
     showSyncError('โหลดข้อมูลไม่สำเร็จ กรุณาลองใหม่',enterPublic);
   }
@@ -696,7 +720,7 @@ async function loadPublicData(){
 /* ── Logout ── */
 
 function doLogout(){
-  isAdmin=false; saToken=null; saTokenExpiry=0;
+  isAdmin=false; isCoach=false; saToken=null; saTokenExpiry=0;
   sessions=[]; nextId=1;
   selectedCoach=''; selectedVenue=''; weekOffset=0;
   _syncBtnAction=null;
@@ -705,7 +729,7 @@ function doLogout(){
   document.getElementById('loginBox').style.display='block';
   document.getElementById('syncBox').style.display='none';
   document.getElementById('loginErr').textContent='';
-  document.body.classList.remove('admin-mode');
+  document.body.classList.remove('admin-mode','coach-mode');
   document.getElementById('logoutBtn').textContent='ออกจากระบบ';
   document.getElementById('coachFilter').value='';
   document.getElementById('venueFilter').value='';
@@ -723,7 +747,7 @@ async function changeWeek(d){
   const fDate=document.getElementById('fDate');
   if(fDate) fDate.value=toDateStr(getWeekStart(weekOffset));
   render();
-  if(isAdmin){
+  if(isAdmin||isCoach){
     try{const t=await getToken();if(await doPullFromSheets(t))render();}catch(e){}
   }else{
     try{await loadPublicData();render();}catch(e){}
@@ -826,7 +850,7 @@ function render(){
           </div>
           <div style="text-align:right">
             <span class="level-badge level-${s.level}">${lvlLabel(s.level)}</span>
-            ${isAdmin?`<div class="session-actions">
+            ${(isAdmin||isCoach)?`<div class="session-actions">
               <button class="btn-sm" onclick="openEdit(${s.id})">✏️</button>
               <button class="btn-sm" onclick="openDuplicate(${s.id})">📋</button>
               <button class="btn-sm danger" onclick="delSession(${s.id})">🗑️</button>
@@ -837,22 +861,29 @@ function render(){
     cal.appendChild(card);
   }
 
-  if(isAdmin){
+  if(isAdmin||isCoach){
     const fDate=document.getElementById('fDate');
     if(!fDate.value) fDate.value=toDateStr(new Date());
     updateEndTime('f');
     buildVenueSelect('fVenue',document.getElementById('fVenue').value||'Beat Discovery');
 
-    document.getElementById('coachList').innerHTML=coaches.map(c=>`
-      <div class="coach-item">
-        <div class="coach-avatar" style="${c.active==='no'?'opacity:.4':''}">${c.emoji}</div>
-        <div style="flex:1"><div class="coach-name" style="${c.active==='no'?'opacity:.5':''}">${c.name}</div><div class="coach-specialty">${c.active==='yes'?'✅ ว่าง':'⛔ ไม่ว่าง'}</div></div>
-        <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
-          <span style="font-family:'Bebas Neue',sans-serif;font-size:1.1rem;color:var(--green)">${sessions.filter(s=>s.coach===c.name).length}</span>
-          <button class="btn-sm" onclick="toggleCoachActive('${c.name}')">${c.active==='yes'?'ลา':'กลับ'}</button>
-          <button class="btn-sm danger" onclick="removeCoach('${c.name}')">🗑️</button>
-        </div>
-      </div>`).join('')||'<div style="color:var(--muted);font-size:.82rem;text-align:center;padding:8px 0">ยังไม่มีโค้ช</div>';
+    if(isAdmin){
+      document.getElementById('coachList').innerHTML=coaches.map(c=>`
+        <div class="coach-item">
+          <div class="coach-avatar" style="${c.active==='no'?'opacity:.4':''}">${c.emoji}</div>
+          <div style="flex:1"><div class="coach-name" style="${c.active==='no'?'opacity:.5':''}">${c.name}</div><div class="coach-specialty">${c.active==='yes'?'✅ ว่าง':'⛔ ไม่ว่าง'}</div></div>
+          <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
+            <span style="font-family:'Bebas Neue',sans-serif;font-size:1.1rem;color:var(--green)">${sessions.filter(s=>s.coach===c.name).length}</span>
+            <button class="btn-sm" onclick="toggleCoachActive('${c.name}')">${c.active==='yes'?'ลา':'กลับ'}</button>
+            <button class="btn-sm danger" onclick="removeCoach('${c.name}')">🗑️</button>
+          </div>
+        </div>`).join('')||'<div style="color:var(--muted);font-size:.82rem;text-align:center;padding:8px 0">ยังไม่มีโค้ช</div>';
+      document.getElementById('venueList').innerHTML=venues.map(v=>`
+        <div class="coach-item" style="padding:7px 0">
+          <div style="flex:1;font-size:.85rem;font-weight:600">${v}</div>
+          <button class="btn-sm danger" onclick="removeVenue('${v}')">🗑️</button>
+        </div>`).join('')||'<div style="color:var(--muted);font-size:.82rem;text-align:center;padding:8px 0">ยังไม่มีสถานที่</div>';
+    }
   }
 }
 
@@ -992,7 +1023,7 @@ async function doPullFromSheets(token){
 }
 
 async function pushAndPull(){
-  if(!isAdmin) return;
+  if(!isAdmin&&!isCoach) return;
   try{
     const t=await getToken();
     await doSyncToSheets(t);
@@ -1103,6 +1134,25 @@ async function toggleCoachActive(name){
   await saveCoaches();
   showToast(`${c.active==='yes'?'✅':'⛔'} ${name} ${c.active==='yes'?'ว่าง':'ไม่ว่าง'}`);
   populateCoachDropdowns();
+  render();
+}
+
+function addVenue(){
+  const name=document.getElementById('newVenueName').value.trim();
+  if(!name){showToast('⚠️ กรุณาใส่ชื่อสถานที่');return;}
+  if(venues.includes(name)){showToast('⚠️ มีสถานที่นี้แล้ว');return;}
+  venues.push(name);
+  localStorage.setItem(KEY_VENUES,JSON.stringify(venues));
+  document.getElementById('newVenueName').value='';
+  showToast(`✅ เพิ่มสถานที่ ${name} แล้ว`);
+  render();
+}
+
+function removeVenue(name){
+  if(!confirm(`ลบสถานที่ "${name}"?`))return;
+  venues=venues.filter(v=>v!==name);
+  localStorage.setItem(KEY_VENUES,JSON.stringify(venues));
+  showToast(`🗑️ ลบสถานที่ ${name} แล้ว`);
   render();
 }
 
